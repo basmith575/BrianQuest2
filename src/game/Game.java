@@ -5237,7 +5237,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		 */
 		String equipString = (String) a.get(6);
 		String[] equipPieces = equipString.split(";");
-		for(int i=0; i<4; i++) //there should always be 4 pieces so don't even bother checking
+		for(int i=0; i<5; i++) //there should always be 5 pieces so don't even bother checking
 		{
 			temp.equip[i] = Item.itemFromID(Integer.parseInt(equipPieces[i]));
 		}
