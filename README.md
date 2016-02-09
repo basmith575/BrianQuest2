@@ -7,6 +7,8 @@
 <li>To run the game, select Frame.java and click the green play button
 </ol>
 
+If you want to run Java through the command prompt, you're on your own because I know nothing about that.
+
 <em>Files:</em>
 <ul>
 <li><b>Action.java:</b> Wrapper class for any action that can happen in battle. Attack, poison damage, flee, using a skill, using an item, etc. Has stuff like target type (one enemy, all allies, etc.), animations to display, information about the skill, etc.
