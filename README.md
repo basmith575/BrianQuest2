@@ -1,6 +1,13 @@
 # BrianQuest2
 
-TODO
+How to probably configure your Eclipse:
+<ol>
+<li>Install Eclipse
+<li>File -> Import -> Existing projects into workspace -> select the BrianQuest 2 folder
+<li>To run the game, select Frame.java and click the green play button
+</ol>
+
+<u>TODO</u>
 <ul>
 <li>Add icon.PNG and uncomment the section in Frame.java
 <li>Some sort of "cast skill" player animation as a catch-all for skills (to use if the skill doesn't have a custom animation)
