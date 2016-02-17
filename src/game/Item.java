@@ -734,7 +734,6 @@ class PlasticArmor extends Item
 	{
 		switch(characterID)
 		{
-			case Character.RYAN: return true; //TODO: remove
 			case Character.MYCHAL: return true;
 		}
 		return true;

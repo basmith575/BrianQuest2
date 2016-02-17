@@ -212,7 +212,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 
 	public void init()
 	{
-		setDoubleBuffered(true);
+		//setDoubleBuffered(true); Apparently this never gets called? Moved double buffering to Game constructor
 	}
 	
 	public void gameLoop()
@@ -450,6 +450,8 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		
 		setFocusable(true);
 		requestFocus();
+		
+		setDoubleBuffered(true);
 		
 		setState(TITLESCREEN);
 		
@@ -5419,6 +5421,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		{
 			File file = new File(System.getProperty("user.home") + "\\BrianQuest2\\data\\party0.txt");
 			file.getParentFile().mkdirs();
+			file.getParentFile().setWritable(true);
 			
 			outputParty0 = new PrintWriter(new FileWriter(System.getProperty("user.home") + "\\BrianQuest2\\data\\party0.txt"));
 			outputParty1 = new PrintWriter(new FileWriter(System.getProperty("user.home") + "\\BrianQuest2\\data\\party1.txt"));
@@ -5435,7 +5438,11 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		catch(IOException e)
 		{
 			System.out.println("new game error: " + e.getMessage());
-			System.exit(0);
+			//System.exit(0);
+			
+			//After Permission Denied error, just continue into the game?
+			setState(MAP); //TODO: intro
+			playMapSong(false);
 		}
 
 		writeCharacter(new Brian(1,0),outputParty0);

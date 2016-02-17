@@ -4,9 +4,7 @@ import java.util.ArrayList;
 import java.util.Random;
 
 public class Monster extends Unit
-{
-	public static int numMonsters = 30; //the total number of monsters, used for the bestiary
-	
+{	
 	/**
 	 * Monster IDs
 	 */
