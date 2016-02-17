@@ -17,6 +17,12 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 	public static int prevState; 	//determine the last state
 	public static int newState;		//new state (for TaskTimer)
 	
+	/***
+	 * Cross-System Compatibility
+	 */
+	public static String FileSeparator = "";
+	public static String OS = null;
+	
 	/**
 	 * Game states
 	 */
@@ -215,12 +221,29 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		//setDoubleBuffered(true); Apparently this never gets called? Moved double buffering to Game constructor
 	}
 	
+	public void checkOS() 
+	{
+		if (OS == null)
+		{
+			OS = System.getProperty("os.name");
+		}
+		
+		if (OS.startsWith("Windows"))
+		{
+			FileSeparator = "\\";
+		} else
+		{
+			FileSeparator = "/";
+		}
+	}
+	
 	public void gameLoop()
 	{
 	    new Thread()
 	    {
 	        public void run()
 	        {
+	        	
 	            while(true)
 	            {
 	            	try
@@ -452,6 +475,8 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		requestFocus();
 		
 		setDoubleBuffered(true);
+		
+		checkOS(); //set OS and FileSeparator before doing any File I/O
 		
 		setState(TITLESCREEN);
 		
@@ -5098,17 +5123,17 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		//TODO
 		try
 		{
-			inputParty0 = new BufferedReader(new FileReader(System.getProperty("user.home") + "\\BrianQuest2\\" + folder + "\\party0.txt"));
-			inputParty1 = new BufferedReader(new FileReader(System.getProperty("user.home") + "\\BrianQuest2\\" + folder + "\\party1.txt"));
-			inputParty2 = new BufferedReader(new FileReader(System.getProperty("user.home") + "\\BrianQuest2\\" + folder + "\\party2.txt"));
-			inputParty3 = new BufferedReader(new FileReader(System.getProperty("user.home") + "\\BrianQuest2\\" + folder + "\\party3.txt"));
-			inputParty4 = new BufferedReader(new FileReader(System.getProperty("user.home") + "\\BrianQuest2\\" + folder + "\\party4.txt"));
-			inputParty5 = new BufferedReader(new FileReader(System.getProperty("user.home") + "\\BrianQuest2\\" + folder + "\\party5.txt"));
-			inputParty6 = new BufferedReader(new FileReader(System.getProperty("user.home") + "\\BrianQuest2\\" + folder + "\\party6.txt"));
-			inputParty7 = new BufferedReader(new FileReader(System.getProperty("user.home") + "\\BrianQuest2\\" + folder + "\\party7.txt"));
-			inputPosition = new BufferedReader(new FileReader(System.getProperty("user.home") + "\\BrianQuest2\\" + folder + "\\position.txt"));
-			inputInventory = new BufferedReader(new FileReader(System.getProperty("user.home") + "\\BrianQuest2\\" + folder + "\\inventory.txt"));
-			inputMaps = new BufferedReader(new FileReader(System.getProperty("user.home") + "\\BrianQuest2\\" + folder + "\\maps.txt"));
+			inputParty0 = new BufferedReader(new FileReader(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + folder + FileSeparator + "party0.txt"));
+			inputParty1 = new BufferedReader(new FileReader(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + folder + FileSeparator + "party1.txt"));
+			inputParty2 = new BufferedReader(new FileReader(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + folder + FileSeparator + "party2.txt"));
+			inputParty3 = new BufferedReader(new FileReader(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + folder + FileSeparator + "party3.txt"));
+			inputParty4 = new BufferedReader(new FileReader(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + folder + FileSeparator + "party4.txt"));
+			inputParty5 = new BufferedReader(new FileReader(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + folder + FileSeparator + "party5.txt"));
+			inputParty6 = new BufferedReader(new FileReader(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + folder + FileSeparator + "party6.txt"));
+			inputParty7 = new BufferedReader(new FileReader(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + folder + FileSeparator + "party7.txt"));
+			inputPosition = new BufferedReader(new FileReader(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + folder + FileSeparator + "position.txt"));
+			inputInventory = new BufferedReader(new FileReader(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + folder + FileSeparator + "inventory.txt"));
+			inputMaps = new BufferedReader(new FileReader(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + folder + FileSeparator + "maps.txt"));
 		}
 		catch(Exception e)
 		{
@@ -5148,7 +5173,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		
 		try
 		{
-			inputPosition = new BufferedReader(new FileReader(System.getProperty("user.home") + "\\BrianQuest2\\data\\position.txt"));
+			inputPosition = new BufferedReader(new FileReader(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "position.txt"));
 			
 			ArrayList saved0 = loadFile(inputPosition);
 			
@@ -5175,7 +5200,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		{
 			try
 			{
-				inputPosition = new BufferedReader(new FileReader(System.getProperty("user.home") + "\\BrianQuest2\\old\\position.txt"));
+				inputPosition = new BufferedReader(new FileReader(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "old" + FileSeparator + "position.txt"));
 				
 				ArrayList savedPosition = loadFile(inputPosition);
 				
@@ -5419,21 +5444,22 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 	{
 		try
 		{
-			File file = new File(System.getProperty("user.home") + "\\BrianQuest2\\data\\party0.txt");
+			checkOS();
+			File file = new File(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party0.txt");
 			file.getParentFile().mkdirs();
 			file.getParentFile().setWritable(true);
 			
-			outputParty0 = new PrintWriter(new FileWriter(System.getProperty("user.home") + "\\BrianQuest2\\data\\party0.txt"));
-			outputParty1 = new PrintWriter(new FileWriter(System.getProperty("user.home") + "\\BrianQuest2\\data\\party1.txt"));
-			outputParty2 = new PrintWriter(new FileWriter(System.getProperty("user.home") + "\\BrianQuest2\\data\\party2.txt"));
-			outputParty3 = new PrintWriter(new FileWriter(System.getProperty("user.home") + "\\BrianQuest2\\data\\party3.txt"));
-			outputParty4 = new PrintWriter(new FileWriter(System.getProperty("user.home") + "\\BrianQuest2\\data\\party4.txt"));
-			outputParty5 = new PrintWriter(new FileWriter(System.getProperty("user.home") + "\\BrianQuest2\\data\\party5.txt"));
-			outputParty6 = new PrintWriter(new FileWriter(System.getProperty("user.home") + "\\BrianQuest2\\data\\party6.txt"));
-			outputParty7 = new PrintWriter(new FileWriter(System.getProperty("user.home") + "\\BrianQuest2\\data\\party7.txt"));
-			outputInventory = new PrintWriter(new FileWriter(System.getProperty("user.home") + "\\BrianQuest2\\data\\inventory.txt"));
-			outputPosition = new PrintWriter(new FileWriter(System.getProperty("user.home") + "\\BrianQuest2\\data\\position.txt"));
-			outputMaps = new PrintWriter(new FileWriter(System.getProperty("user.home") + "\\BrianQuest2\\data\\maps.txt"));
+			outputParty0 = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party0.txt"));
+			outputParty1 = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party1.txt"));
+			outputParty2 = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party2.txt"));
+			outputParty3 = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party3.txt"));
+			outputParty4 = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party4.txt"));
+			outputParty5 = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party5.txt"));
+			outputParty6 = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party6.txt"));
+			outputParty7 = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party7.txt"));
+			outputInventory = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "inventory.txt"));
+			outputPosition = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "position.txt"));
+			outputMaps = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "maps.txt"));
 		}
 		catch(IOException e)
 		{
@@ -6759,20 +6785,20 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		//TODO
 		try
 		{
-			File file = new File(System.getProperty("user.home") + "\\BrianQuest2\\" + folder + "\\party0.txt");
+			File file = new File(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + folder + FileSeparator + "party0.txt");
 			file.getParentFile().mkdirs();
 			
-			outputParty0 = new PrintWriter(new FileWriter(System.getProperty("user.home") + "\\BrianQuest2\\data\\party0.txt"));
-			outputParty1 = new PrintWriter(new FileWriter(System.getProperty("user.home") + "\\BrianQuest2\\data\\party1.txt"));
-			outputParty2 = new PrintWriter(new FileWriter(System.getProperty("user.home") + "\\BrianQuest2\\data\\party2.txt"));
-			outputParty3 = new PrintWriter(new FileWriter(System.getProperty("user.home") + "\\BrianQuest2\\data\\party3.txt"));
-			outputParty4 = new PrintWriter(new FileWriter(System.getProperty("user.home") + "\\BrianQuest2\\data\\party4.txt"));
-			outputParty5 = new PrintWriter(new FileWriter(System.getProperty("user.home") + "\\BrianQuest2\\data\\party5.txt"));
-			outputParty6 = new PrintWriter(new FileWriter(System.getProperty("user.home") + "\\BrianQuest2\\data\\party6.txt"));
-			outputParty7 = new PrintWriter(new FileWriter(System.getProperty("user.home") + "\\BrianQuest2\\data\\party7.txt"));
-			outputInventory = new PrintWriter(new FileWriter(System.getProperty("user.home") + "\\BrianQuest2\\data\\inventory.txt"));
-			outputPosition = new PrintWriter(new FileWriter(System.getProperty("user.home") + "\\BrianQuest2\\data\\position.txt"));
-			outputMaps = new PrintWriter(new FileWriter(System.getProperty("user.home") + "\\BrianQuest2\\data\\maps.txt"));
+			outputParty0 = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party0.txt"));
+			outputParty1 = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party1.txt"));
+			outputParty2 = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party2.txt"));
+			outputParty3 = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party3.txt"));
+			outputParty4 = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party4.txt"));
+			outputParty5 = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party5.txt"));
+			outputParty6 = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party6.txt"));
+			outputParty7 = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party7.txt"));
+			outputInventory = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "inventory.txt"));
+			outputPosition = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "position.txt"));
+			outputMaps = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "maps.txt"));
 		}
 		catch(IOException e)
 		{

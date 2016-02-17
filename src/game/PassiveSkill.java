@@ -65,7 +65,7 @@ public class PassiveSkill
 	public static final int LIGHTNINGELEMENTATTACK = 46;	//Makes attacks do Lightning element damage (% based on Dex)
 	
 	
-	public static final int POISONSTATUSRESIST = 47;		//Increase Poison status resistance (% based on Dex)
+	public static final int POISONSTATUSRESIST = 47;		//Increase Poison status resistance (% based on Dex)		TODO: have actual names for these passives
 	public static final int SILENCESTATUSRESIST = 48;		//Increase Silence status resistance (% based on Dex)
 	public static final int BLINDSTATUSRESIST = 49;			//Increase Blind status resistance (% based on Dex)
 	public static final int SLEEPSTATUSRESIST = 50;			//Increase Sleep status resistance (% based on Dex)
