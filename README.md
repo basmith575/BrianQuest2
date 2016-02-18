@@ -48,10 +48,11 @@ If you want to run Java through the command prompt, you're on your own because I
 <li>Dark/Holy elements? Would be good for evil things like Waffle House
 <li>Death as the 8th status resistance? Reduces chance to die from instant-death spells. Could replace "murderable" property in Unit
 <li>Cursor memory in battle
-<li>Options menu - stuff like volume, cursor memory settings, etc.
+<li>Options menu - stuff like volume, cursor memory settings, button settings, etc.
 <li>xOffset and yOffset for Shop events, similar to what Inn is doing
 <li>Make critical hits more obvious somehow - write "Critical" above the damage in orange or something
 <li>Handle negative resistances (weaknesses) - so -50% fire resistance would mean it takes 50% more damage. This might already be handled but I'm not sure
 <li>Some way to handle ghosts being immune to physical damage - how do we determine if something is physical?
 <li>Some sort of "super class" that holds anything we'd want to serialize (characters, inventory, map states, etc.)? Would make saving less terrible but would require a lot of restructuring
+<li>MapWriter
 </ul>
