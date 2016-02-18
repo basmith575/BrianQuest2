@@ -231,7 +231,8 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		if (OS.startsWith("Windows"))
 		{
 			FileSeparator = "\\";
-		} else
+		}
+		else
 		{
 			FileSeparator = "/";
 		}
@@ -484,7 +485,6 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		party = new Unit[8]; //6 party members, 2 extra space in case 1 in party and 5 in "storage"
 		for(int i=0; i<party.length; i++) party[i] = new None();
 		
-		//leveledUp = new boolean[3];
 		afterBattleAlerts = new ArrayList<AfterBattleAlert>();
 		
 		monsters = new ArrayList<Unit>();
@@ -5444,7 +5444,6 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 	{
 		try
 		{
-			checkOS();
 			File file = new File(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party0.txt");
 			file.getParentFile().mkdirs();
 			file.getParentFile().setWritable(true);
