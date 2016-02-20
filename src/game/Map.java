@@ -721,9 +721,9 @@ public class Map
 		return this.tile[x][y].event;
 	}
 	
-	public void addArt(int x, int y, String art)
+	public void addArt(int x, int y, String art, String caption)
 	{
-		tile[x][y].event = new Art(art);
+		tile[x][y].event = new Art(art, caption);
 		this.tile[x][y].event.x = x;
 		this.tile[x][y].event.y = y;
 	}
@@ -1037,7 +1037,7 @@ class TestTown extends Map
 	{		
 		this.id = 0;
 		this.name = "Test Town";
-		this.song = "Junkyard";
+		this.song = "Ducks Ahoy";
 		this.tile = new Tile[100][70];
 		this.states = states;
 		
@@ -1154,6 +1154,9 @@ class TestTown extends Map
 		addPortal(26,15,this.id,65,22);
 		addPortal(65,23,this.id,26,16);
 		
+		fillRect(67,15,70,15,Tile.WOODWALL);
+		fillRect(67,16,70,16,Tile.DARKWOODWALL);
+		
 		thing(68,9,Thing.WINDOW);
 		thing(60,9,Thing.BOOKCASE);
 		thing(60,10,Thing.BOOKCASE);
@@ -1167,6 +1170,10 @@ class TestTown extends Map
 		thing(70,20,Thing.POTTEDPLANT);
 		thing(62,11,Thing.LONGTABLE);
 		thing(67,11,Thing.LONGTABLE);
+		
+		addArt(67,16,"Brian1","A primitive cave painting.");
+		addArt(69,16,"AlexFursona","A strange and mysterious creature.");
+		addArt(70,16,"Frogsona","A glorious frog of legend.");
 		
 		addNPC(63,15,"Town Beauty",NPC.BEAUTY,Game.WEST,0);
 		event(63,15).addText(0,"Welcome to my lovely house.","Please stop intruding.");
@@ -1184,6 +1191,8 @@ class TestTown extends Map
 		this.tile[63][11].walkable = false;
 		
 		addInnkeeper(68,11,"Innkeeper",NPC.MAN,Game.SOUTH,0,-1,30);
+		
+		fillMusic(60,10,70,23,"Soiled Soil");
 		
 		this.makeEnemyList();
 		this.recalculateStates();
@@ -1376,6 +1385,9 @@ class Event
 	//for NPCs
 	public ArrayList<ArrayList<String[]>> dialogue;
 	String[] toAdd;
+	
+	//for art
+	public String caption;
 	
 	public Event()
 	{
@@ -1607,11 +1619,12 @@ class Portal extends Event
 
 class Art extends Event
 {
-	public Art(String art)
+	public Art(String art, String caption)
 	{
 		this.type = ART;
 		
 		this.name = art;
+		this.caption = caption;
 	}
 }
 

@@ -481,7 +481,6 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		
 		setState(TITLESCREEN);
 		
-		mute = true; //TODO: remove
 		party = new Unit[8]; //6 party members, 2 extra space in case 1 in party and 5 in "storage"
 		for(int i=0; i<party.length; i++) party[i] = new None();
 		
@@ -564,8 +563,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		index = new ArrayList<Integer>();
 		index.add(0);
 		
-		//playSong("Main Menu");
-		//clip.setFramePosition(564656);
+		playSong("Nice");
 		
 		gameLoop();
 		tileLoop();
@@ -668,7 +666,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		party[index2] = temp;
 	}
 	
-	public void playMapSong(boolean setFrame)
+	public void playMapSong(boolean useSavedFrame)
 	{
 		if(!mute)
 		{
@@ -678,50 +676,16 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			}
 			else playSong(curMap.song);
 			
-			if(setFrame) clip.setFramePosition(songFrame);
+			if(useSavedFrame)
+			{
+				clip.setFramePosition(songFrame);
+			}
 		}
 	}
 	
 	public void playSong(String song)
 	{
-		currentSong = song;
-		
-		if(!mute)
-		{
-			try
-			{
-				try
-				{
-					if(clip != null)
-					{
-						clip.stop();
-						clip.close();
-					}
-				}
-				catch(Exception e)
-				{
-					System.out.println("Couldn't stop the clip: " + e.getMessage());
-				}
-				
-				URL url = getClass().getResource("bgm/" + song + ".wav");
-				AudioInputStream audioIn = AudioSystem.getAudioInputStream(url);
-
-				clip = AudioSystem.getClip();
-				
-				clip.open(audioIn);
-				
-				clip.setLoopPoints(getLoopPoints(song)[0],getLoopPoints(song)[1]);
-				
-				gainControl = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
-
-				playRunnable();
-			}
-			catch(Exception e)
-			{
-				System.out.println(e.getMessage());
-				System.out.println("Error playing song: " + song);
-			}
-		}
+		playSong(song, false);
 	}
 	
 	public void playRunnable()
@@ -744,7 +708,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		new Thread(soundPlayer).start();
 	}
 	
-	public void playSong(String name, boolean repeat)
+	public void playSong(String name, boolean saveClipPosition)
 	{
 		currentSong = name;
 		
@@ -752,10 +716,19 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		{
 			try
 			{
+				if(saveClipPosition)
+				{
+					songFrame = clip.getFramePosition();
+					if(songFrame >= getLoopPoints(curMap.song)[1]) songFrame = (songFrame-getLoopPoints(curMap.song)[0])%(getLoopPoints(curMap.song)[1]-getLoopPoints(curMap.song)[0])+getLoopPoints(curMap.song)[0];
+				}
+				
 				try
 				{
-					clip.stop();
-					clip.close();
+					if(clip != null)
+					{
+						clip.stop();
+						clip.close();
+					}
 				}
 				catch(Exception e)
 				{
@@ -769,15 +742,16 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				
 				clip.open(audioIn);
 				
+				clip.setLoopPoints(getLoopPoints(name)[0], getLoopPoints(name)[1]);
+				
 				gainControl = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
 				gainControl.setValue(volume);
 				
-				clip.start();
+				playRunnable();
 			}
 			catch(Exception e)
 			{
-				System.out.println(e.getMessage());
-				System.out.println("Error playing song: " + name);
+				System.out.println("Error playing song " + name + ": " + e.getMessage());
 			}
 		}
 	}
@@ -807,8 +781,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			}
 			catch(Exception e)
 			{
-				System.out.println(e.getMessage());
-				System.out.println("Error playing sound: " + name);
+				System.out.println("Error playing sound " + name + ": " + e.getMessage());
 			}
 		}
 	}
@@ -850,6 +823,8 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		}
 		else prevSong = curMap.song;
 		
+		System.out.println("prevSong = " + prevSong);
+		
 		curMap.recalculateStates();
 		map[curMap.id].states = curMap.states;
 		
@@ -864,7 +839,12 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			newSong = curMap.tile[curX][curY].music;
 		}
 		
-		if(!prevSong.equals(newSong)) playSong(newSong);
+		System.out.println("newSong = " + newSong);
+		
+		if(!prevSong.equals(newSong))
+		{
+			playSong(newSong, false);
+		}
 	}
 	
 	public void paint(Graphics g)
@@ -995,9 +975,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		}
 		else if(state == VIEWART)
 		{
-			drawMap(g);
-			
-			draw(curEvent.name,"art",175,100,g);
+			drawViewArt(g);
 		}
 		else if(state == ACTIVESKILLMENU)
 		{
@@ -3143,6 +3121,15 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 	{
 		prevState = state;
 		state = setState;
+		
+		if(state == BATTLEWON)
+		{
+			playSong("Victory");
+		}
+		else if(state == BATTLELOST)
+		{
+			playSong("Fancy Feast Funeral");
+		}
 	}
 	
 	public void drawBattleChoice(Graphics g)
@@ -3382,27 +3369,27 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		for(int i=top; i<=bottom; i++)
 		{
 			g.setColor(Color.BLACK);
-			g.fillRect(300,90+32*(i-top),230,25);
+			g.fillRect(240,90+32*(i-top),350,25);
 			g.setColor(lightGray);
-			g.fillRect(301,91+32*(i-top),228,23);
+			g.fillRect(241,91+32*(i-top),348,23);
 			g.setColor(Color.BLACK);
 			g.setFont(arialBold18);
-			g.drawString(inventory.get(i).name,340,110+32*(i-top));
-			draw(inventory.get(i).getIconString(),300,90+32*(i-top),g);
+			g.drawString(inventory.get(i).name,280,110+32*(i-top));
+			draw(inventory.get(i).getIconString(),240,90+32*(i-top),g);
 			
 			g.setFont(arialBold14);
 			g.setColor(Color.BLACK);
-			g.drawString(""+inventory.get(i).qty,510,108+32*(i-top));
+			drawStringRightAligned(""+inventory.get(i).qty,585,108+32*(i-top),g);
 			
 			if(state == INVENTORYREARRANGE && i == prevIndex(1))
 			{
-				draw("pointerSelected",270,90+32*(i-top),g);
+				draw("pointerSelected",210,90+32*(i-top),g);
 			}
 		}
 		
 		if(state == INVENTORY || state == INVENTORYREARRANGE)
 		{
-			draw("pointer",270,90+32*cursorAlign,g);
+			draw("pointer",210,90+32*cursorAlign,g);
 		}
 		
 		if(state != INVENTORYSORT)
@@ -3643,6 +3630,38 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			
 			draw("pointer",445+175*xPos,120+180*yPos,g);
 		}
+	}
+	
+	public void drawViewArt(Graphics g)
+	{
+		drawMap(g);
+		
+		//normally we'd use the draw() function, but we need to get the image's width and height
+		icon = new ImageIcon(getClass().getResource("img/art/" + curEvent.name + ".PNG"));
+		img = icon.getImage();
+		
+		int imageWidth = img.getWidth(null);
+		int imageHeight = img.getHeight(null);
+		
+		g.setColor(Color.BLACK);
+		g.fillRect(425-imageWidth/2-10,275-imageHeight/2-10,imageWidth+20,imageHeight+20);
+		g.setColor(Color.GRAY);
+		g.fillRect(425-imageWidth/2-7,275-imageHeight/2-7,imageWidth+14,imageHeight+14);
+		g.setColor(Color.BLACK);
+		g.fillRect(425-imageWidth/2-4,275-imageHeight/2-4,imageWidth+8,imageHeight+8);
+		
+		g.drawImage(img,425-imageWidth/2,275-imageHeight/2,this);
+		
+		g.fillRect(425-imageWidth/2-10,275+imageHeight/2+15,imageWidth+20,40);
+		g.setColor(Color.GRAY);
+		g.fillRect(425-imageWidth/2-7,275+imageHeight/2+18,imageWidth+14,34);
+		
+		if(!curEvent.caption.equals(""))
+		{
+			g.setColor(Color.BLACK);
+			g.setFont(arialBold16);
+			drawCenteredString(curEvent.caption,425,275+imageHeight/2+40,g);
+		}		
 	}
 	
 	public void drawMainMenu(Graphics g)
@@ -5690,10 +5709,10 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
         }
     }
 	
-	public void onChangingState(int state)
+	public void onChangingState(int newState)
 	{
 		//do stuff that should happen once when changing to another state via TimerTask
-		if(state == BATTLE)
+		if(newState == BATTLE)
 		{
 			battleAction = null;
 			
@@ -5701,7 +5720,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			
 			repaint();
 		}
-		else if(state == BATTLERECALCULATE)
+		else if(newState == BATTLERECALCULATE)
 		{
 			//battleAction = null;
 			
@@ -5950,6 +5969,8 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		int action = Action.ATTACK; //default
 		
 		if(monster.status[Unit.SILENCE] == 1 || monster.status[Unit.BERSERK] > 0) return Action.ATTACK;
+		
+		//TODO: have actual AI instead of just choosing randomly (if the monster's smart)
 		
 		if(id == Monster.SNAKE)
 		{
@@ -7038,9 +7059,9 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			
 			if(curMap.tile[curX][curY].event.type == Event.PORTAL)
 			{
-				int a = curMap.tile[curX][curY].event.destMap;
-				int b = curMap.tile[curX][curY].event.destX;
-				int c = curMap.tile[curX][curY].event.destY;
+				int destMap = curMap.tile[curX][curY].event.destMap;
+				int destX = curMap.tile[curX][curY].event.destX;
+				int destY = curMap.tile[curX][curY].event.destY;
 				
 				if(curMap.tile[curX][curY].event.dir != -1)
 				{
@@ -7054,7 +7075,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					playSound(curMap.tile[curX][curY].sound);
 				}
 				
-				changeMap(a,b,c);
+				changeMap(destMap, destX, destY);
 
 				wildRate = 0;
 			}
@@ -7087,14 +7108,8 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					newState = BATTLE;
 					
 					wildRate = 0;
-					
-					if(!mute)
-					{
-						songFrame = clip.getFramePosition();
-						if(songFrame >= getLoopPoints(curMap.song)[1]) songFrame = (songFrame-getLoopPoints(curMap.song)[0])%(getLoopPoints(curMap.song)[1]-getLoopPoints(curMap.song)[0])+getLoopPoints(curMap.song)[0];
-						
-						playSong("Battle");
-					}
+											
+					playSong("Battle", true);
 				}
 				
 				wildRate++;
@@ -7766,12 +7781,6 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				newGame();
 				loadData("data"); //load the new data
 				
-				if(!mute)
-				{
-					playSong("Intro");
-					clip.setFramePosition(30737);
-				}
-				
 				addIndex(0);
 			}
 			else if(curIndex() == 0) //Continue
@@ -8052,6 +8061,8 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		{
 			setState(MAP);
 			
+			playMapSong(true);
+			
 			clearIndex();
 		}
 		else if(state == BATTLELOST)
@@ -8061,6 +8072,8 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		else if(state == GAMEOVER)
 		{
 			setState(TITLESCREEN);
+			
+			playSong("Nice");
 			
 			clearIndex();
 		}
@@ -8878,7 +8891,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		}
 		else if(state == EDITPARTY || state == EDITPARTYSWITCH)
 		{
-			if(curIndex() < 3)
+			if(curIndex() < 3 && party[3].id != Character.NONE)
 			{
 				setIndex(3);
 			}
@@ -9092,8 +9105,11 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			{
 				mute = true;
 				
-				clip.stop();
-				clip.close();
+				if(clip != null)
+				{
+					clip.stop();
+					clip.close();
+				}
 			}
 		}
 	}
