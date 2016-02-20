@@ -823,8 +823,6 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		}
 		else prevSong = curMap.song;
 		
-		System.out.println("prevSong = " + prevSong);
-		
 		curMap.recalculateStates();
 		map[curMap.id].states = curMap.states;
 		
@@ -838,8 +836,6 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		{
 			newSong = curMap.tile[curX][curY].music;
 		}
-		
-		System.out.println("newSong = " + newSong);
 		
 		if(!prevSong.equals(newSong))
 		{
@@ -2013,34 +2009,47 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			rand = new Random();
 		}
 		
-		//TODO: refactor more, this is a mess
-		
-		/**
-		 * Attack
-		 */
-		if(action == Action.ATTACK)
+		if(action == Action.POISON)
 		{
-			int hitRate = Unit.getHitRate(attack,target,0);
+			//shouldn't care about resistance for poison status damage
+			//if(target.elementResistance[POISON] == 100) return 0; 
 			
+			double ddmg = attack.maxHp * 0.05;
+			ddmg = randomize(ddmg,85,115); //randomize
+			
+			value = (int) ddmg;
+			if(value < 1) value = 1;
+			
+			//ddmg -= ddmg*(target.elementResistance[POISON]/100.0);
+			
+			return value;
+		}
+		
+		Action actionObj = Action.actionFromID(action);
+		
+		int hitRateMod = actionObj.hitRateMod; //TODO: figure out how high these hit rate boosts should be
+		
+		if(hitRateMod != 999) //999 = never miss
+		{
+			int hitRate = Unit.getHitRate(attack,target,actionObj.hitRateMod);
 			if(rand.nextInt(100) >= hitRate)
 			{
 				miss.clear();
 				miss.add(true);
 				return 0; //miss
 			}
-			
-			double ddmg = 0;
-			if(attack.unitType == Unit.CHARACTER)
-			{
-				ddmg = (5.0 + ((attack.str + (attack.level/7.0) + attack.atk)*(attack.str * attack.atk))/32.0)*(1.0 - (2.5*target.def)/100.0) - target.def;
-			}
-			else
-			{
-				ddmg = (5.0 + ((2 * Math.pow(attack.str,3.0))/32.0))*(1.0 - (2.5*target.def)/100.0) - target.def;
-			}
-			
-			ddmg = randomize(ddmg,attack.getDmgLowerBound(),100);
-			
+		}
+		
+		if(actionObj.element != NOELEMENT)
+		{
+			if(target.elementResistance[actionObj.element] == 100) return 0;
+		}
+		
+		double ddmg = actionObj.calculateDamage(attack, target);
+		ddmg = randomize(ddmg,attack.getDmgLowerBound(),100);
+		
+		if(actionObj.damageType == Action.PHYSICAL)
+		{
 			if(attack.status[Unit.BERSERK] > 0)
 			{
 				ddmg *= 1.25;
@@ -2060,844 +2069,46 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			{
 				ddmg /= 2.0;
 			}
+		}
+		else if(actionObj.damageType == Action.MAGICAL)
+		{
+			if(target.status[Unit.SHELL] > 0)
+			{
+				ddmg /= 2.0;
+			}
 			
+			if(target.status[Unit.DEFEND] == 1)
+			{
+				ddmg /= 2.0;
+			}
+		}
+		
+		if(actionObj.element != NOELEMENT)
+		{
+			ddmg -= ddmg*(target.elementResistance[actionObj.element]/100.0);
+			if(ddmg < 0 && ddmg > -1) ddmg = -1;
+		}
+		
+		if(action == Action.ATTACK)
+		{
 			if(rand.nextInt(100) < attack.critRate)
 			{
 				ddmg *= 2.0;
 				crit.clear();
 				crit.add(true);
 			}
-			
-			value = (int) ddmg;
-			if(value < 1) value = 1;
-			
-			return value;
-		}
-		
-		/**
-		 * Brian
-		 */
-		else if(action == Action.BRIANPUNCH)
-		{
-			int hitRate = Unit.getHitRate(attack,target,10);
-			
-			if(rand.nextInt(100) >= hitRate)
-			{
-				miss.clear();
-				miss.add(true);
-				return 0; //miss
-			}
-			
-			double ddmg = (25.0 + 5.0*attack.str + ((attack.str + (attack.level/7.0))*(Math.pow(attack.str,2.0)))/32.0)*(1.0 - (2.5*target.def)/100.0) - target.def;
-			ddmg = randomize(ddmg,attack.getDmgLowerBound(),100);
-			
-			if(attack.status[Unit.ATKUP] > 0)
-			{
-				ddmg *= 1.5;
-			}
-			
-			if(target.status[Unit.PROTECT] > 0)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(target.status[Unit.DEFEND] == 1)
-			{
-				ddmg /= 2.0;
-			}
-			
-			value = (int) ddmg;
-			if(value < 1) value = 1;
-			
-			return value;
-		}
-		else if(action == Action.CHEEZITBLAST)
-		{
-			int hitRate = Unit.getHitRate(attack,target,30);
-			
-			if(rand.nextInt(100) >= hitRate)
-			{
-				miss.clear();
-				miss.add(true);
-				return 0; //miss
-			}
-			
-			if(target.elementResistance[SNACK] == 100) return 0;
-			
-			double ddmg = (10.0 + 0.8*Math.pow(attack.mag + (attack.level/7.0) + (attack.dex/10.0),1.8))*(1.0 - (2.5*target.mdef)/100.0) - target.mdef;
-			ddmg = randomize(ddmg,attack.getDmgLowerBound(),100);
-			
-			if(target.status[Unit.SHELL] > 0)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(target.status[Unit.DEFEND] == 1)
-			{
-				ddmg /= 2.0;
-			}
-			
-			ddmg -= ddmg*(target.elementResistance[SNACK]/100.0);
-			if(ddmg < 0 && ddmg > -1) ddmg = -1;
-			
-			value = (int) ddmg;
-			if(value == 0) value = 1;
-			
-			return value;
-		}
-		else if(action == Action.COOLRANCHLASER)
-		{
-			int hitRate = Unit.getHitRate(attack,target,10);
-			
-			if(rand.nextInt(100) >= hitRate)
-			{
-				miss.clear();
-				miss.add(true);
-				return 0; //miss
-			}
-			
-			if(target.elementResistance[SNACK] == 100) return 0;
-			
-			double ddmg = (40.0 + 2.0*Math.pow(attack.mag + (attack.level/7.0) + (attack.dex/10.0),2.0))*(1.0 - (2.5*target.mdef)/100.0) - target.mdef;
-			ddmg = randomize(ddmg,attack.getDmgLowerBound(),100);
-			
-			if(target.status[Unit.SHELL] > 0)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(target.status[Unit.DEFEND] == 1)
-			{
-				ddmg /= 2.0;
-			}
-			
-			ddmg -= ddmg*(target.elementResistance[SNACK]/100.0);
-			if(ddmg < 0 && ddmg > -1) ddmg = -1;
-			
-			value = (int) ddmg;
-			if(value == 0) value = 1;
-			
-			return value;
-		}
-		else if(action == Action.BRIANSMASH)
-		{
-			int hitRate = Unit.getHitRate(attack,target,10);
-			
-			if(rand.nextInt(100) >= hitRate)
-			{
-				miss.clear();
-				miss.add(true);
-				return 0; //miss
-			}
-			
-			//stronger Brian Punch that ignores defense
-			double ddmg = (40.0 + 10.0*attack.str + ((attack.str + (attack.level/7.0))*(Math.pow(attack.str,2.0)))/32.0);
-			ddmg = randomize(ddmg,attack.getDmgLowerBound(),100);
-			
-			if(attack.status[Unit.ATKUP] > 0)
-			{
-				ddmg *= 1.5;
-			}
-			
-			if(target.status[Unit.PROTECT] > 0)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(target.status[Unit.DEFEND] == 1)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(ddmg < 0 && ddmg > -1) ddmg = -1;
-			
-			value = (int) ddmg;
-			if(value == 0) value = 1;
-			
-			return value;
-		}
-		else if(action == Action.FLAVOREXPLOSION)
-		{
-			int hitRate = Unit.getHitRate(attack,target,10);
-			
-			if(rand.nextInt(100) >= hitRate)
-			{
-				miss.clear();
-				miss.add(true);
-				return 0; //miss
-			}
-			
-			if(target.elementResistance[SNACK] == 100) return 0;
-			
-			double ddmg = (20.0 + 1.7*Math.pow(attack.mag + (attack.level/7.0) + (attack.dex/10.0),1.8))*(1.0 - (2.5*target.mdef)/100.0) - target.mdef;
-			ddmg = randomize(ddmg,attack.getDmgLowerBound(),100);
-			
-			if(target.status[Unit.SHELL] > 0)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(target.status[Unit.DEFEND] == 1)
-			{
-				ddmg /= 2.0;
-			}
-			
-			ddmg -= ddmg*(target.elementResistance[SNACK]/100.0);
-			if(ddmg < 0 && ddmg > -1) ddmg = -1;
-			
-			value = (int) ddmg;
-			if(value == 0) value = 1;
-			
-			return value;
-		}
-		
-		/**
-		 * Alex
-		 */
-		else if(action == Action.BARF || action == Action.VOMITERUPTION)
-		{
-			int hitRate = Unit.getHitRate(attack,target,10);
-			
-			if(rand.nextInt(100) >= hitRate)
-			{
-				miss.clear();
-				miss.add(true);
-				return 0; //miss
-			}
-			
-			if(target.elementResistance[POISON] == 100) return 0;
-			
-			double ddmg = (20.0 + 1.5*Math.pow(attack.mag + (attack.level/7.0) + (attack.dex/10.0),2.0))*(1.0 - (2.5*target.mdef)/100.0) - target.mdef;
-			ddmg = randomize(ddmg,attack.getDmgLowerBound(),100);
-			
-			if(target.status[Unit.SHELL] > 0)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(target.status[Unit.DEFEND] == 1)
-			{
-				ddmg /= 2.0;
-			}
-			
-			ddmg -= ddmg*(target.elementResistance[POISON]/100.0);
-			if(ddmg < 0 && ddmg > -1) ddmg = -1;
-			
-			value = (int) ddmg;
-			if(value == 0) value = 1;
-			
-			return value;
-		}
-		else if(action == Action.FLAIL)
-		{
-			int hitRate = Unit.getHitRate(attack,target,10);
-			
-			if(rand.nextInt(100) >= hitRate)
-			{
-				miss.clear();
-				miss.add(true);
-				return 0; //miss
-			}
-			
-			double ddmg = 2.0*(5.0 + ((attack.str + (attack.level/7.0) + attack.atk)*(attack.str * attack.atk))/32.0)*(1.0 - (2.5*target.def)/100.0) - target.def;
-			ddmg = randomize(ddmg,attack.getDmgLowerBound(),100);
-			
-			if(attack.status[Unit.ATKUP] > 0)
-			{
-				ddmg *= 1.5;
-			}
-			
-			if(target.status[Unit.PROTECT] > 0)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(target.status[Unit.DEFEND] == 1)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(ddmg < 0 && ddmg > -1) ddmg = -1;
-			
-			value = (int) ddmg;
-			if(value == 0) value = 1;
-			
-			return value;
-		}
-		else if(action == Action.SHRIEK)
-		{
-			int hitRate = Unit.getHitRate(attack,target,10);
-			
-			if(rand.nextInt(100) >= hitRate)
-			{
-				miss.clear();
-				miss.add(true);
-				return 0; //miss
-			}
-			
-			double ddmg = (25.0 + 2.0*Math.pow(attack.mag + (attack.level/7.0) + (attack.dex/10.0),2.0))*(1.0 - (2.5*target.mdef)/100.0) - target.mdef;
-			ddmg = randomize(ddmg,attack.getDmgLowerBound(),100);
-			
-			if(target.status[Unit.SHELL] > 0)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(target.status[Unit.DEFEND] == 1)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(ddmg < 0 && ddmg > -1) ddmg = -1;
-			
-			value = (int) ddmg;
-			if(value == 0) value = 1;
-			
-			return value;
-		}
-		else if(action == Action.KAMIKAZE)
-		{
-			int hitRate = Unit.getHitRate(attack,target,10);
-			
-			if(rand.nextInt(100) >= hitRate)
-			{
-				miss.clear();
-				miss.add(true);
-				return 0; //miss
-			}
-			
-			double ddmg = 7.0*(5.0 + ((attack.str + (attack.level/7.0) + attack.atk)*(attack.str * attack.atk))/32.0)*(1.0 - (2.5*target.def)/100.0) - target.def;
-			ddmg = randomize(ddmg,attack.getDmgLowerBound(),100);
-			
-			if(attack.status[Unit.ATKUP] > 0)
-			{
-				ddmg *= 1.5;
-			}
-			
-			if(target.status[Unit.PROTECT] > 0)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(target.status[Unit.DEFEND] == 1)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(ddmg < 0 && ddmg > -1) ddmg = -1;
-			
-			value = (int) ddmg;
-			if(value == 0) value = 1;
-			
-			return value;
-		}
-		else if(action == Action.SUMMONTRAINS)
-		{
-			int hitRate = Unit.getHitRate(attack,target,10);
-			
-			if(rand.nextInt(100) >= hitRate)
-			{
-				miss.clear();
-				miss.add(true);
-				return 0; //miss
-			}
-			
-			double ddmg = 4.0*(30.0 + ((attack.str + (attack.level/7.0) + attack.dex)*(attack.str * attack.mag))/32.0)*(1.0 - (2.5*target.def)/100.0) - target.def;
-			ddmg = randomize(ddmg,attack.getDmgLowerBound(),100);
-			
-			if(attack.status[Unit.ATKUP] > 0)
-			{
-				ddmg *= 1.5;
-			}
-			
-			if(target.status[Unit.PROTECT] > 0)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(target.status[Unit.DEFEND] == 1)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(ddmg < 0 && ddmg > -1) ddmg = -1;
-			
-			value = (int) ddmg;
-			if(value == 0) value = 1;
-			
-			return value;
-		}
-		
-		/**
-		 * Ryan
-		 */
-		else if(action == Action.BAJABLAST)
-		{
-			int hitRate = Unit.getHitRate(attack,target,10);
-			
-			if(rand.nextInt(100) >= hitRate)
-			{
-				miss.clear();
-				miss.add(true);
-				return 0; //miss
-			}
-			
-			if(target.elementResistance[WATER] == 100) return 0;
-			
-			double ddmg = (20.0 + 2.0*Math.pow(attack.mag + (attack.level/7.0) + (attack.dex/10.0),1.9))*(1.0 - (2.5*target.mdef)/100.0) - target.mdef;
-			ddmg = randomize(ddmg,attack.getDmgLowerBound(),100);
-			
-			if(target.status[Unit.SHELL] > 0)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(target.status[Unit.DEFEND] == 1)
-			{
-				ddmg /= 2.0;
-			}
-			
-			ddmg -= ddmg*(target.elementResistance[WATER]/100.0);
-			
-			if(ddmg < 0 && ddmg > -1) ddmg = -1;
-			
-			value = (int) ddmg;
-			if(value == 0) value = 1;
-			
-			return value;
-		}
-		else if(action == Action.MYSTERIOUSMELODY)
-		{
-			int hitRate = Unit.getHitRate(attack,target,10);
-			
-			if(rand.nextInt(100) >= hitRate)
-			{
-				miss.clear();
-				miss.add(true);
-				return 0; //miss
-			}
-			
-			if(target.elementResistance[element] == 100) return 0;
-			
-			double ddmg = (20.0 + 2.0*Math.pow(attack.mag + (attack.level/7.0) + (attack.dex/10.0),1.9))*(1.0 - (2.5*target.mdef)/100.0) - target.mdef;
-			ddmg = randomize(ddmg,attack.getDmgLowerBound(),100);
-			
-			if(target.status[Unit.SHELL] > 0)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(target.status[Unit.DEFEND] == 1)
-			{
-				ddmg /= 2.0;
-			}
-			
-			ddmg -= ddmg*(target.elementResistance[element]/100.0);
-			
-			if(ddmg < 0 && ddmg > -1) ddmg = -1;
-			
-			value = (int) ddmg;
-			if(value == 0) value = 1;
-			
-			return value;
-		}
-		
-		/**
-		 * Michael 
-		 */
-		else if(action == Action.SHURIKEN)
-		{
-			double ddmg = (5.0 + ((attack.str + (attack.level/7.0) + attack.atk)*(attack.str * attack.atk))/32.0)*(1.0 - (2.5*target.def)/100.0) - target.def;
-			ddmg = randomize(ddmg,attack.getDmgLowerBound(),100);
-			
-			if(attack.status[Unit.ATKUP] > 0)
-			{
-				ddmg *= 1.5;
-			}
-			
-			if(target.status[Unit.PROTECT] > 0)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(target.status[Unit.DEFEND] == 1)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(ddmg < 0 && ddmg > -1) ddmg = -1;
-			
-			value = (int) ddmg;
-			if(value == 0) value = 1;
-			
-			return value;
-		}
-		else if(action == Action.NINJUTSUSLICE)
-		{
-			int hitRate = Unit.getHitRate(attack,target,10);
-			
-			if(rand.nextInt(100) >= hitRate)
-			{
-				miss.clear();
-				miss.add(true);
-				return 0; //miss
-			}
-			
-			double ddmg = 1.25*(5.0 + ((attack.str + (attack.level/7.0) + attack.atk + 1.5*target.mag)*(attack.str * attack.atk))/32.0)*(1.0 - (2.5*target.def)/100.0) - target.def;
-			ddmg = randomize(ddmg,attack.getDmgLowerBound(),100);
-			
-			if(attack.status[Unit.ATKUP] > 0)
-			{
-				ddmg *= 1.5;
-			}
-			
-			if(target.status[Unit.PROTECT] > 0)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(target.status[Unit.DEFEND] == 1)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(ddmg < 0 && ddmg > -1) ddmg = -1;
-			
-			value = (int) ddmg;
-			if(value == 0) value = 1;
-			
-			return value;
 		}
 		else if(action == Action.SAMURAISLASH)
 		{
-			int hitRate = Unit.getHitRate(attack,target,10);
-			
-			if(rand.nextInt(100) >= hitRate)
-			{
-				miss.clear();
-				miss.add(true);
-				return 0; //miss
-			}
-			
-			double ddmg = 1.25*(5.0 + ((attack.str + (attack.level/7.0) + attack.atk)*(attack.str * attack.atk))/32.0)*(1.0 - (2.5*target.def)/100.0) - target.def;
-			ddmg = randomize(ddmg,attack.getDmgLowerBound(),100);
-			
-			if(attack.status[Unit.ATKUP] > 0)
-			{
-				ddmg *= 1.5;
-			}
-			
-			if(target.status[Unit.PROTECT] > 0)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(target.status[Unit.DEFEND] == 1)
-			{
-				ddmg /= 2.0;
-			}
-			
 			int halfChance = 40 + attack.dex;
 			if(rand.nextInt(100) < halfChance) //TODO: work on this forumla, some monsters should be immune, etc.
 			{
 				if(target.hp/2 > ddmg) ddmg = target.hp/2;
 			}
-			
-			if(ddmg < 0 && ddmg > -1) ddmg = -1;
-			
-			value = (int) ddmg;
-			if(value == 0) value = 1;
-			
-			return value;
-		}
-		else if(action == Action.BUSHIDOBLADE)
-		{
-			int hitRate = Unit.getHitRate(attack,target,10);
-			
-			if(rand.nextInt(100) >= hitRate)
-			{
-				miss.clear();
-				miss.add(true);
-				return 0; //miss
-			}
-			
-			double mod = 7.0/(6.0*((double)attack.hp/attack.maxHp)+1.0);
-			
-			double ddmg = mod*(5.0 + ((attack.str + (attack.level/7.0) + attack.atk)*(attack.str * attack.atk))/32.0)*(1.0 - (2.5*target.def)/100.0) - target.def;
-			ddmg = randomize(ddmg,attack.getDmgLowerBound(),100);
-			
-			if(attack.status[Unit.ATKUP] > 0)
-			{
-				ddmg *= 1.5;
-			}
-			
-			if(target.status[Unit.PROTECT] > 0)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(target.status[Unit.DEFEND] == 1)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(ddmg < 0 && ddmg > -1) ddmg = -1;
-			
-			value = (int) ddmg;
-			if(value == 0) value = 1;
-			
-			return value;
-		}
-		else if(action == Action.MURAMASAMARA)
-		{
-			int hitRate = Unit.getHitRate(attack,target,-50);
-			
-			if(rand.nextInt(100) >= hitRate)
-			{
-				miss.clear();
-				miss.add(true);
-				return 0; //miss
-			}
-			
-			double ddmg = 5.0*(5.0 + ((attack.str + (attack.level/7.0) + attack.atk)*(attack.str * attack.atk))/32.0)*(1.0 - (2.5*target.def)/100.0) - target.def;
-			ddmg = randomize(ddmg,attack.getDmgLowerBound(),100);
-			
-			if(attack.status[Unit.ATKUP] > 0)
-			{
-				ddmg *= 1.5;
-			}
-			
-			if(target.status[Unit.PROTECT] > 0)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(target.status[Unit.DEFEND] == 1)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(ddmg < 0 && ddmg > -1) ddmg = -1;
-			
-			value = (int) ddmg;
-			if(value == 0) value = 1;
-			
-			return value;
 		}
 		
-		/**
-		 * Kitten
-		 */
-		else if(action == Action.FIRE)
-		{
-			int hitRate = Unit.getHitRate(attack,target,10); //TODO: figure out how these hit rate boosts should work
-			
-			if(rand.nextInt(100) >= hitRate)
-			{
-				miss.clear();
-				miss.add(true);
-				return 0; //miss
-			}
-			
-			if(target.elementResistance[FIRE] == 100) return 0;
-			
-			double ddmg = (20.0 + Math.pow(attack.mag + (attack.level/7.0) + (attack.dex/10.0),1.9))*(1.0 - (2.5*target.mdef)/100.0) - target.mdef;
-			ddmg = randomize(ddmg,attack.getDmgLowerBound(),100);
-			
-			if(target.status[Unit.SHELL] > 0)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(target.status[Unit.DEFEND] == 1)
-			{
-				ddmg /= 2.0;
-			}
-			
-			ddmg -= ddmg*(target.elementResistance[FIRE]/100.0);
-			
-			if(ddmg < 0 && ddmg > -1) ddmg = -1;
-			
-			value = (int) ddmg;
-			if(value == 0) value = 1;
-			
-			return value;
-		}
-		else if(action == Action.BIGFIRE)
-		{
-			int hitRate = Unit.getHitRate(attack,target,10);
-			
-			if(rand.nextInt(100) >= hitRate)
-			{
-				miss.clear();
-				miss.add(true);
-				return 0; //miss
-			}
-			
-			if(target.elementResistance[FIRE] == 100) return 0;
-			
-			double ddmg = (40.0 + 1.6*Math.pow(attack.mag + (attack.level/7.0) + (attack.dex/10.0),2.0))*(1.0 - (2.5*target.mdef)/100.0) - target.mdef;
-			ddmg = randomize(ddmg,attack.getDmgLowerBound(),100);
-			
-			if(target.status[Unit.SHELL] > 0)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(target.status[Unit.DEFEND] == 1)
-			{
-				ddmg /= 2.0;
-			}
-			
-			ddmg -= ddmg*(target.elementResistance[FIRE]/100.0);
-			if(ddmg < 0 && ddmg > -1) ddmg = -1;
-			
-			value = (int) ddmg;
-			if(value == 0) value = 1;
-			
-			return value;
-		}
-		else if(action == Action.LIGHTNINGBOLT || action == Action.LIGHTNINGSTORM) //TODO: make Storm do more damage? or no?
-		{
-			int hitRate = Unit.getHitRate(attack,target,10);
-			
-			if(rand.nextInt(100) >= hitRate)
-			{
-				miss.clear();
-				miss.add(true);
-				return 0; //miss
-			}
-			
-			if(target.elementResistance[LIGHTNING] == 100) return 0;
-			
-			double ddmg = (30.0 + 1.15*Math.pow(attack.mag + (attack.level/7.0) + (attack.dex/10.0),1.9))*(1.0 - (2.5*target.mdef)/100.0) - target.mdef;
-			ddmg = randomize(ddmg,attack.getDmgLowerBound(),100);
-			
-			if(target.status[Unit.SHELL] > 0)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(target.status[Unit.DEFEND] == 1)
-			{
-				ddmg /= 2.0;
-			}
-			
-			ddmg -= ddmg*(target.elementResistance[LIGHTNING]/100.0);
-			if(ddmg < 0 && ddmg > -1) ddmg = -1;
-			
-			value = (int) ddmg;
-			if(value == 0) value = 1;
-			
-			return value;
-		}
-		else if(action == Action.DEVOUR)
-		{
-			double ddmg = (25.0 + 5.0*attack.str + ((attack.str + (attack.level/7.0))*(Math.pow(attack.str,2.0)))/32.0)*(1.0 - (2.5*target.def)/100.0) - target.def; //same as Brian Punch
-			ddmg = randomize(ddmg,attack.getDmgLowerBound(),100);
-			
-			if(attack.status[Unit.ATKUP] > 0)
-			{
-				ddmg *= 1.5;
-			}
-			
-			if(target.status[Unit.PROTECT] > 0)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(target.status[Unit.DEFEND] == 1)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(ddmg < 0 && ddmg > -1) ddmg = -1;
-			
-			value = (int) ddmg;
-			if(value == 0) value = 1;
-			
-			return value;
-		}
-		else if(action == Action.EARTHSPIKE || action == Action.EARTHQUAKE) //TODO: same damage, or no?
-		{
-			int hitRate = Unit.getHitRate(attack,target,10);
-			
-			if(rand.nextInt(100) >= hitRate)
-			{
-				miss.clear();
-				miss.add(true);
-				return 0; //miss
-			}
-			
-			if(target.elementResistance[EARTH] == 100) return 0;
-			
-			double ddmg = (35.0 + 1.25*Math.pow(attack.mag + (attack.level/7.0) + (attack.dex/10.0),1.9))*(1.0 - (2.5*target.mdef)/100.0) - target.mdef;
-			ddmg = randomize(ddmg,attack.getDmgLowerBound(),100);
-			
-			if(target.status[Unit.SHELL] > 0)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(target.status[Unit.DEFEND] == 1)
-			{
-				ddmg /= 2.0;
-			}
-			
-			ddmg -= ddmg*(target.elementResistance[EARTH]/100.0);
-			if(ddmg < 0 && ddmg > -1) ddmg = -1;
-			
-			value = (int) ddmg;
-			if(value == 0) value = 1;
-			
-			return value;
-		}
-		else if(action == Action.CATSCRATCH)
-		{
-			double ddmg = (25.0 + 5.0*attack.str + ((attack.str + (attack.level/7.0))*(Math.pow(attack.str,2.0)))/32.0)*(1.0 - (2.5*target.def)/100.0) - target.def; //same as Brian Punch
-			ddmg = randomize(ddmg,attack.getDmgLowerBound(),100);
-			
-			if(attack.status[Unit.ATKUP] > 0)
-			{
-				ddmg *= 1.5;
-			}
-			
-			if(target.status[Unit.PROTECT] > 0)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(target.status[Unit.DEFEND] == 1)
-			{
-				ddmg /= 2.0;
-			}
-			
-			if(ddmg < 0 && ddmg > -1) ddmg = -1;
-			
-			value = (int) ddmg;
-			if(value == 0) value = 1;
-			
-			return value;
-		}
-		
-		/**
-		 * Poison
-		 */
-		else if(action == Action.POISON)
-		{
-			//shouldn't care about resistance for poison status damage
-			//if(target.elementResistance[POISON] == 100) return 0; 
-			
-			double ddmg = attack.maxHp * 0.05;
-			ddmg = randomize(ddmg,85,115); //randomize
-			
-			value = (int) ddmg;
-			if(value < 1) value = 1;
-			
-			//ddmg -= ddmg*(target.elementResistance[POISON]/100.0);
-			
-			return value;
-		}
+		value = (int) ddmg;
+		if(value < 1) value = 1;
 		
 		return value;
 	}
@@ -4771,7 +3982,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		}
 		catch(Exception e)
 		{
-			if(folder.equals("monster")) //TODO: do this for characters too
+			if(folder.equals("monster"))
 			{
 				String monsterName = name.split("_")[0];
 				String animationID = name.split("_")[1];
@@ -4780,6 +3991,16 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				{
 					draw(monsterName + "_" + NORMAL,folder,x,y,g);
 				}
+			}
+			else if(folder.equals("battleCharacter"))
+			{
+				 String characterName = name.split("_")[0];
+				 String animationID = name.split("_")[1];
+				 
+				 if(!animationID.equals(NORMAL))
+				 {
+					 draw(characterName + "_" + NORMAL,folder,x,y,g);
+				 }
 			}
 			else
 			{
@@ -5766,7 +4987,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 							{
 								target.doDamage(value);
 								
-								if(target.status[Unit.SLEEP] > 0 && Action.wakesUp(battleAction.action))
+								if(target.status[Unit.SLEEP] > 0 && Action.actionFromID(battleAction.action).wakesUp())
 								{
 									target.status[Unit.SLEEP] = 0;
 								}

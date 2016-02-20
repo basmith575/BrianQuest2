@@ -82,6 +82,10 @@ public abstract class Action
 	public static final int DEVOUR = 510;
 	
 	/**
+	 * Kev-Bot
+	 */
+	
+	/**
 	 * Other
 	 */
 	
@@ -92,6 +96,16 @@ public abstract class Action
 	public static final int MPITEM = 1001;
 	public static final int REVIVEITEM = 1002;
 	
+	/**
+	 * Physical or Magical
+	 */
+	public static final int PHYSICAL = 0;
+	public static final int MAGICAL = 1;
+	public static final int OTHERDAMAGETYPE = 2;
+	
+	public int damageType;
+	public int hitRateMod;
+	
 	public int mp; //MP cost
 	
 	public int targetType; //what it targets
@@ -101,7 +115,7 @@ public abstract class Action
 	public static final int ONEALLY = 3;
 	public static final int ALLALLIES = 4;
 	public static final int ONEUNIT = 5;
-	public static final int OTHER = 6; //special cases to handle manually
+	public static final int OTHERTARGETTYPE = 6; //special cases to handle manually
 	
 	public String name;
 	public String desc; //skill description
@@ -199,25 +213,32 @@ public abstract class Action
 		return new NoAction();
 	}
 	
+	public double calculateDamage(Unit attack, Unit target)
+	{
+		return 0; //override for each action
+	}
+	
 	public static String targetTypeString(int targetType)
 	{
 		switch(targetType)
 		{
-		case ONEENEMY: return "One enemy";
-		case ALLENEMIES: return "All enemies";
-		case SELF: return "Self";
-		case ONEALLY: return "One ally";
-		case ALLALLIES: return "All allies";
-		case ONEUNIT: return "One unit";
+			case ONEENEMY: return "One enemy";
+			case ALLENEMIES: return "All enemies";
+			case SELF: return "Self";
+			case ONEALLY: return "One ally";
+			case ALLALLIES: return "All allies";
+			case ONEUNIT: return "One unit";
 		}
 		
 		return "";
 	}
 	
-	public static boolean wakesUp(int id)
+	public boolean wakesUp()
 	{
-		//TODO: add any physical skills here
-		if(id == ATTACK || id == BRIANPUNCH) return true;
+		if(this.damageType == PHYSICAL)
+		{
+			return true;
+		}
 		
 		return false;
 	}
@@ -369,6 +390,24 @@ class Attack extends Action
 		this.damageFrame = 0;
 		
 		this.element = Game.NOELEMENT;
+		this.damageType = PHYSICAL;
+		this.hitRateMod = 0;
+	}
+	
+	public double calculateDamage(Unit attack, Unit target)
+	{
+		double ddmg = 0;
+		
+		if(attack.unitType == Unit.CHARACTER)
+		{
+			ddmg = (5.0 + ((attack.str + (attack.level/7.0) + attack.atk)*(attack.str * attack.atk))/32.0)*(1.0 - (2.5*target.def)/100.0) - target.def;
+		}
+		else
+		{
+			ddmg = (5.0 + ((2 * Math.pow(attack.str,3.0))/32.0))*(1.0 - (2.5*target.def)/100.0) - target.def;
+		}
+		
+		return ddmg;
 	}
 }
 
@@ -386,6 +425,8 @@ class Poison extends Action
 		this.damageFrame = 0;
 		
 		this.element = Game.NOELEMENT; //no point setting this
+		this.damageType = OTHERDAMAGETYPE; //no point setting this
+		this.hitRateMod = 0; //no point setting this
 	}
 }
 
@@ -403,6 +444,7 @@ class Regen extends Action
 		this.damageFrame = 0;
 		
 		this.element = Game.NOELEMENT;
+		this.damageType = OTHERDAMAGETYPE;
 	}
 }
 
@@ -424,6 +466,13 @@ class BrianPunch extends Action
 		this.damageFrame = 0;
 		
 		this.element = Game.NOELEMENT;
+		this.damageType = PHYSICAL;
+		this.hitRateMod = 10;
+	}
+	
+	public double calculateDamage(Unit attack, Unit target)
+	{
+		return (25.0 + 5.0*attack.str + ((attack.str + (attack.level/7.0))*(Math.pow(attack.str,2.0)))/32.0)*(1.0 - (2.5*target.def)/100.0) - target.def;
 	}
 }
 
@@ -442,6 +491,13 @@ class BrianSmash extends Action
 		this.damageFrame = 0;
 		
 		this.element = Game.NOELEMENT;
+		this.damageType = PHYSICAL;
+		this.hitRateMod = 10;
+	}
+	
+	public double calculateDamage(Unit attack, Unit target)
+	{
+		return (40.0 + 10.0*attack.str + ((attack.str + (attack.level/7.0))*(Math.pow(attack.str,2.0)))/32.0);
 	}
 }
 
@@ -460,6 +516,13 @@ class CheezItBlast extends Action
 		this.damageFrame = 0;
 		
 		this.element = Game.SNACK;
+		this.damageType = MAGICAL;
+		this.hitRateMod = 30;
+	}
+	
+	public double calculateDamage(Unit attack, Unit target)
+	{
+		return (10.0 + 0.8*Math.pow(attack.mag + (attack.level/7.0) + (attack.dex/10.0),1.8))*(1.0 - (2.5*target.mdef)/100.0) - target.mdef;
 	}
 }
 
@@ -478,6 +541,13 @@ class CoolRanchLaser extends Action
 		this.damageFrame = 0;
 		
 		this.element = Game.SNACK;
+		this.damageType = MAGICAL;
+		this.hitRateMod = 30;
+	}
+	
+	public double calculateDamage(Unit attack, Unit target)
+	{
+		return (40.0 + 2.0*Math.pow(attack.mag + (attack.level/7.0) + (attack.dex/10.0),2.0))*(1.0 - (2.5*target.mdef)/100.0) - target.mdef;
 	}
 }
 
@@ -496,6 +566,13 @@ class FlavorExplosion extends Action
 		this.damageFrame = 0;
 		
 		this.element = Game.SNACK;
+		this.damageType = MAGICAL;
+		this.hitRateMod = 30;
+	}
+	
+	public double calculateDamage(Unit attack, Unit target)
+	{
+		return (20.0 + 1.7*Math.pow(attack.mag + (attack.level/7.0) + (attack.dex/10.0),1.8))*(1.0 - (2.5*target.mdef)/100.0) - target.mdef;
 	}
 }
 
@@ -607,6 +684,13 @@ class Barf extends Action
 		this.damageFrame = 0;
 		
 		this.element = Game.POISON;
+		this.damageType = MAGICAL;
+		this.hitRateMod = 10;
+	}
+	
+	public double calculateDamage(Unit attack, Unit target)
+	{
+		return (20.0 + 1.5*Math.pow(attack.mag + (attack.level/7.0) + (attack.dex/10.0),2.0))*(1.0 - (2.5*target.mdef)/100.0) - target.mdef;
 	}
 }
 
@@ -625,6 +709,13 @@ class Flail extends Action
 		this.damageFrame = 0;
 		
 		this.element = Game.NOELEMENT;
+		this.damageType = PHYSICAL;
+		this.hitRateMod = 10;
+	}
+	
+	public double calculateDamage(Unit attack, Unit target)
+	{
+		return 2.0*(5.0 + ((attack.str + (attack.level/7.0) + attack.atk)*(attack.str * attack.atk))/32.0)*(1.0 - (2.5*target.def)/100.0) - target.def;
 	}
 }
 
@@ -679,6 +770,13 @@ class Shriek extends Action
 		this.damageFrame = 0;
 		
 		this.element = Game.NOELEMENT;
+		this.damageType = MAGICAL;
+		this.hitRateMod = 10;
+	}
+	
+	public double calculateDamage(Unit attack, Unit target)
+	{
+		return (25.0 + 2.0*Math.pow(attack.mag + (attack.level/7.0) + (attack.dex/10.0),2.0))*(1.0 - (2.5*target.mdef)/100.0) - target.mdef;
 	}
 }
 
@@ -715,6 +813,13 @@ class Kamikaze extends Action
 		this.damageFrame = 0;
 		
 		this.element = Game.NOELEMENT;
+		this.damageType = PHYSICAL;
+		this.hitRateMod = 10;
+	}
+	
+	public double calculateDamage(Unit attack, Unit target)
+	{
+		return 7.0*(5.0 + ((attack.str + (attack.level/7.0) + attack.atk)*(attack.str * attack.atk))/32.0)*(1.0 - (2.5*target.def)/100.0) - target.def;
 	}
 }
 
@@ -733,6 +838,13 @@ class VomitEruption extends Action
 		this.damageFrame = 0;
 		
 		this.element = Game.POISON;
+		this.damageType = MAGICAL;
+		this.hitRateMod = 10;
+	}
+	
+	public double calculateDamage(Unit attack, Unit target)
+	{
+		return (20.0 + 1.5*Math.pow(attack.mag + (attack.level/7.0) + (attack.dex/10.0),2.0))*(1.0 - (2.5*target.mdef)/100.0) - target.mdef;
 	}
 }
 
@@ -754,6 +866,13 @@ class SummonTrains extends Action
 		this.damageFrame = 0;
 		
 		this.element = Game.NOELEMENT;
+		this.damageType = PHYSICAL;
+		this.hitRateMod = 20;
+	}
+	
+	public double calculateDamage(Unit attack, Unit target)
+	{
+		return 4.0*(30.0 + ((attack.str + (attack.level/7.0) + attack.dex)*(attack.str * attack.mag))/32.0)*(1.0 - (2.5*target.def)/100.0) - target.def;
 	}
 }
 
@@ -817,6 +936,13 @@ class MysteriousMelody extends Action
 		this.damageFrame = 0;
 		
 		this.element = Game.NOELEMENT;
+		this.damageType = MAGICAL;
+		this.hitRateMod = 20;
+	}
+	
+	public double calculateDamage(Unit attack, Unit target)
+	{
+		return (20.0 + 2.0*Math.pow(attack.mag + (attack.level/7.0) + (attack.dex/10.0),1.9))*(1.0 - (2.5*target.mdef)/100.0) - target.mdef;
 	}
 }
 
@@ -835,6 +961,13 @@ class BajaBlast extends Action
 		this.damageFrame = 0;
 		
 		this.element = Game.WATER;
+		this.damageType = MAGICAL;
+		this.hitRateMod = 20;
+	}
+	
+	public double calculateDamage(Unit attack, Unit target)
+	{
+		return (20.0 + 2.0*Math.pow(attack.mag + (attack.level/7.0) + (attack.dex/10.0),1.9))*(1.0 - (2.5*target.mdef)/100.0) - target.mdef;
 	}
 }
 
@@ -961,6 +1094,13 @@ class Shuriken extends Action
 		this.damageFrame = 5;
 		
 		this.element = Game.NOELEMENT;
+		this.damageType = PHYSICAL;
+		this.hitRateMod = 999; //never miss
+	}
+	
+	public double calculateDamage(Unit attack, Unit target)
+	{
+		return (5.0 + ((attack.str + (attack.level/7.0) + attack.atk)*(attack.str * attack.atk))/32.0)*(1.0 - (2.5*target.def)/100.0) - target.def;
 	}
 }
 
@@ -1051,6 +1191,13 @@ class NinjutsuSlice extends Action
 		this.damageFrame = 0;
 		
 		this.element = Game.NOELEMENT;
+		this.damageType = PHYSICAL;
+		this.hitRateMod = 10;
+	}
+	
+	public double calculateDamage(Unit attack, Unit target)
+	{
+		return 1.25*(5.0 + ((attack.str + (attack.level/7.0) + attack.atk + 1.5*target.mag)*(attack.str * attack.atk))/32.0)*(1.0 - (2.5*target.def)/100.0) - target.def;
 	}
 }
 
@@ -1069,6 +1216,13 @@ class SamuraiSlash extends Action
 		this.damageFrame = 0;
 		
 		this.element = Game.NOELEMENT;
+		this.damageType = PHYSICAL;
+		this.hitRateMod = 10;
+	}
+	
+	public double calculateDamage(Unit attack, Unit target)
+	{
+		return 1.25*(5.0 + ((attack.str + (attack.level/7.0) + attack.atk)*(attack.str * attack.atk))/32.0)*(1.0 - (2.5*target.def)/100.0) - target.def;
 	}
 }
 
@@ -1087,6 +1241,15 @@ class BushidoBlade extends Action
 		this.damageFrame = 0;
 		
 		this.element = Game.NOELEMENT;
+		this.damageType = PHYSICAL;
+		this.hitRateMod = 10;
+	}
+	
+	public double calculateDamage(Unit attack, Unit target)
+	{
+		double mod = 7.0/(6.0*((double)attack.hp/attack.maxHp)+1.0);
+		
+		return mod*(5.0 + ((attack.str + (attack.level/7.0) + attack.atk)*(attack.str * attack.atk))/32.0)*(1.0 - (2.5*target.def)/100.0) - target.def;
 	}
 }
 
@@ -1105,6 +1268,13 @@ class Muramasamara extends Action
 		this.damageFrame = 0;
 		
 		this.element = Game.NOELEMENT;
+		this.damageType = PHYSICAL;
+		this.hitRateMod = -50;
+	}
+	
+	public double calculateDamage(Unit attack, Unit target)
+	{
+		return 5.0*(5.0 + ((attack.str + (attack.level/7.0) + attack.atk)*(attack.str * attack.atk))/32.0)*(1.0 - (2.5*target.def)/100.0) - target.def;
 	}
 }
 
@@ -1127,6 +1297,13 @@ class Fire extends Action
 		this.damageFrame = 0;
 		
 		this.element = Game.FIRE;
+		this.damageType = MAGICAL;
+		this.hitRateMod = 10;
+	}
+	
+	public double calculateDamage(Unit attack, Unit target)
+	{
+		return (20.0 + Math.pow(attack.mag + (attack.level/7.0) + (attack.dex/10.0),1.9))*(1.0 - (2.5*target.mdef)/100.0) - target.mdef;
 	}
 }
 
@@ -1145,6 +1322,13 @@ class BigFire extends Action
 		this.damageFrame = 0;
 		
 		this.element = Game.FIRE;
+		this.damageType = MAGICAL;
+		this.hitRateMod = 10;
+	}
+	
+	public double calculateDamage(Unit attack, Unit target)
+	{
+		return (40.0 + 1.6*Math.pow(attack.mag + (attack.level/7.0) + (attack.dex/10.0),2.0))*(1.0 - (2.5*target.mdef)/100.0) - target.mdef;
 	}
 }
 
@@ -1163,6 +1347,13 @@ class LightningBolt extends Action
 		this.damageFrame = 0;
 		
 		this.element = Game.LIGHTNING;
+		this.damageType = MAGICAL;
+		this.hitRateMod = 10;
+	}
+	
+	public double calculateDamage(Unit attack, Unit target)
+	{
+		return (30.0 + 1.15*Math.pow(attack.mag + (attack.level/7.0) + (attack.dex/10.0),1.9))*(1.0 - (2.5*target.mdef)/100.0) - target.mdef;
 	}
 }
 
@@ -1181,6 +1372,13 @@ class LightningStorm extends Action
 		this.damageFrame = 0;
 		
 		this.element = Game.LIGHTNING;
+		this.damageType = MAGICAL;
+		this.hitRateMod = 10;
+	}
+	
+	public double calculateDamage(Unit attack, Unit target)
+	{
+		return (30.0 + 1.15*Math.pow(attack.mag + (attack.level/7.0) + (attack.dex/10.0),1.9))*(1.0 - (2.5*target.mdef)/100.0) - target.mdef;
 	}
 }
 
@@ -1199,6 +1397,13 @@ class EarthSpike extends Action
 		this.damageFrame = 0;
 		
 		this.element = Game.EARTH;
+		this.damageType = MAGICAL;
+		this.hitRateMod = 10;
+	}
+	
+	public double calculateDamage(Unit attack, Unit target)
+	{
+		return (35.0 + 1.25*Math.pow(attack.mag + (attack.level/7.0) + (attack.dex/10.0),1.9))*(1.0 - (2.5*target.mdef)/100.0) - target.mdef;
 	}
 }
 
@@ -1217,6 +1422,13 @@ class Earthquake extends Action
 		this.damageFrame = 0;
 		
 		this.element = Game.EARTH;
+		this.damageType = MAGICAL;
+		this.hitRateMod = 10;
+	}
+	
+	public double calculateDamage(Unit attack, Unit target)
+	{
+		return (35.0 + 1.25*Math.pow(attack.mag + (attack.level/7.0) + (attack.dex/10.0),1.9))*(1.0 - (2.5*target.mdef)/100.0) - target.mdef;
 	}
 }
 
@@ -1289,6 +1501,13 @@ class CatScratch extends Action
 		this.damageFrame = 0;
 		
 		this.element = Game.NOELEMENT;
+		this.damageType = PHYSICAL;
+		this.hitRateMod = 10;
+	}
+	
+	public double calculateDamage(Unit attack, Unit target)
+	{
+		return (25.0 + 5.0*attack.str + ((attack.str + (attack.level/7.0))*(Math.pow(attack.str,2.0)))/32.0)*(1.0 - (2.5*target.def)/100.0) - target.def;
 	}
 }
 
@@ -1307,6 +1526,13 @@ class Devour extends Action
 		this.damageFrame = 0;
 		
 		this.element = Game.NOELEMENT;
+		this.damageType = PHYSICAL;
+		this.hitRateMod = 10;
+	}
+	
+	public double calculateDamage(Unit attack, Unit target)
+	{
+		return (25.0 + 5.0*attack.str + ((attack.str + (attack.level/7.0))*(Math.pow(attack.str,2.0)))/32.0)*(1.0 - (2.5*target.def)/100.0) - target.def;
 	}
 }
 
