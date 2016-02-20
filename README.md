@@ -31,13 +31,10 @@ If you want to run Java through the command prompt, you're on your own because I
 <li>Replace the old art with new art
 <li>Skill animations (do we want to up the frames and lower the milliseconds between frames?). Low priority since this will be the hardest thing
 <li>Kev-Bot character - Brian's dead brother revived in a small robot
-<li>Refactor the terrible temporary code in calculateDamage
 <li>Work on formulas (specifically the ones involving probabilities and Dex)
-<li>Duplicate the monster check for characters in draw() (if there's an exception when drawing from the character folder, try drawing with the NORMAL animation)
 <li>Intro that plays after selecting a new game
 <li>Monster AI - should they just randomly select a target? Or add some actual smartness? At least bosses should be somewhat smart
 <li>Come up with good items/equipments, other active/passive skills, etc.
-<li>Figure out which skills count as physical, add them to wakesUp() in Action.java
 <li>Some way to make animationMap() code in Action.java less bad?
 <li>Make Amp skill do something (should add the Amp status effect which enhances his next non-Amp skill)
 <li>Make all the passive skills work (right now only the stat boosting ones do)
