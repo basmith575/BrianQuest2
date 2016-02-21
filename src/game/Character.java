@@ -15,9 +15,10 @@ public class Character
 
 class None extends Unit
 {
-	public None()
+	public None(int index)
 	{
 		this.id = Character.NONE;
+		this.index = index;
 	}
 }
 

@@ -9,19 +9,9 @@ public class Test
 	{
 		//dmgTest();
 		
-		for(int damage=10; damage<=3000; damage+=50)
-		{
-			for(int def=0; def<=22; def++)
-			{
-				//double result = damage * (20.0/(20.0+def));
-				//result -= Math.pow(def,2.0)/20.0;
-				double result = damage * (1.0 - (2.5*def)/100.0) - def;
-				
-				if(result < 1) result = 1;
-				
-				System.out.println("Damage = " + damage + ", Def = " + def + ": " + (int) result);
-			}
-		}
+		int money = 100;
+		
+		System.out.println(money * 1.5);
 	}
 	
 	public static void dmgTest()

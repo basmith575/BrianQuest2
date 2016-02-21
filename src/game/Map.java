@@ -779,9 +779,9 @@ public class Map
 		this.tile[x][y].event.addText(0,d1,d2,d3);
 	}
 	
-	public void addChest(int x, int y, Item item, int state)
+	public void addChest(int x, int y, Item item, boolean hidden, int state)
 	{
-		this.tile[x][y].event = new Chest(item, state);
+		this.tile[x][y].event = new Chest(item, hidden, state);
 		this.tile[x][y].walkable = false;
 		this.tile[x][y].event.x = x;
 		this.tile[x][y].event.y = y;
@@ -1142,7 +1142,7 @@ class TestTown extends Map
 		addNPC(28,24,"Lil' Man",NPC.DWARF,Game.SOUTH,0);
 		event(28,24).addText(0,"That 'S' on the ground over there","is a save point. The 'S' stands","for Save.");
 		
-		addChest(13,25,new StickOfEnlightenment(1),states[0]);
+		addChest(13,25,new StickOfEnlightenment(1),true,states[0]);
 		
 		addSavePoint(24,23);
 		
@@ -1372,6 +1372,7 @@ class Event
 	
 	//for chests
 	public Item item;
+	public boolean hidden;
 	
 	//for shops
 	public Item[] inventory;
@@ -1553,12 +1554,13 @@ class Innkeeper extends Event
 
 class Chest extends Event
 {
-	public Chest(Item item, int state)
+	public Chest(Item item, boolean hidden, int state)
 	{
 		this.type = CHEST;
 		this.name = "Chest";
 		this.state = state;
 		this.item = item;
+		this.hidden = hidden;
 		
 		this.name = "Chest";
 		

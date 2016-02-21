@@ -348,7 +348,7 @@ public class Unit
 	}
 	
 	public boolean hasLearnedPassiveSkill(int passiveSkillID)
-	{
+	{		
 		for(int i=0; i<this.getLearnedPassiveSkills().size(); i++)
 		{
 			if(this.getLearnedPassiveSkills().get(i).id == passiveSkillID) return true;
@@ -359,6 +359,11 @@ public class Unit
 	
 	public boolean hasEquippedPassiveSkill(int passiveSkillID)
 	{
+		if(this.passiveSkills == null) //if we check this for a monster, could be null
+		{
+			return false;
+		}
+		
 		for(int i=0; i<this.getLearnedPassiveSkills().size(); i++)
 		{
 			if(this.getLearnedPassiveSkills().get(i).id == passiveSkillID && this.getLearnedPassiveSkills().get(i).equipped) return true;
@@ -759,17 +764,38 @@ public class Unit
 	
 	public void doDamage(int damage)
 	{
-		this.hp -= damage;
-		if(this.hp < 0)
+		boolean miraclesAreReal = false;
+		if(this.hp > 1)
 		{
-			this.hp = 0;
-			this.clearAllStatuses();
+			miraclesAreReal = true; //Miracle should only trigger if you had more than 1 HP
+		}
+		
+		this.hp -= damage;
+		
+		if(this.hp <= 0) //unit was killed
+		{
+			boolean miracle = false;
+			if(miraclesAreReal && this.hasEquippedPassiveSkill(PassiveSkill.MIRACLE))
+			{
+				Random rand = new Random();
+				if(rand.nextInt(100) < 3 + this.dex)
+				{
+					this.hp = 1;
+					miracle = true;
+				}
+			}
+			
+			if(!miracle)
+			{
+				this.hp = 0; //don't want negative HP
+				this.clearAllStatuses(); //if revived, shouldn't still have statuses
+			}
 		}
 	}
 	
 	public int getExpNext()
 	{
-		//TODO
+		//TODO: some kind of exponential formula here
 		if(this.level == 99) return -1;
 		else return 1+100*this.level;
 	}
@@ -857,7 +883,7 @@ public class Unit
 			case Character.KITTEN: return new Kitten(level, index);
 		}
 		
-		return new None();
+		return new None(index);
 	}
 	
 	public static Unit monsterFromID(int id, int level)
@@ -867,7 +893,7 @@ public class Unit
 			case Monster.SNAKE: return new Snake();
 		}
 		
-		return new None();
+		return new None(0);
 	}
 	
 	public int getDmgLowerBound()

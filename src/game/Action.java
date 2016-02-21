@@ -105,6 +105,7 @@ public abstract class Action
 	
 	public int damageType;
 	public int hitRateMod;
+	public boolean attacksWithWeapon; //does the skill use the equipped weapon? used for weapon element attacks
 	
 	public int mp; //MP cost
 	
@@ -213,6 +214,16 @@ public abstract class Action
 		return new NoAction();
 	}
 	
+	public int getMPCost(Unit unit)
+	{
+		if(unit.hasEquippedPassiveSkill(PassiveSkill.MPHALF))
+		{
+			return this.mp / 2;
+		}
+		
+		return this.mp;
+	}
+	
 	public double calculateDamage(Unit attack, Unit target)
 	{
 		return 0; //override for each action
@@ -250,7 +261,7 @@ public abstract class Action
 		int[] animations = new int[numFrames-1];
 		for(int i=0; i<animations.length; i++) animations[i] = 0;
 		
-		//TODO: clean up this code
+		//TODO: clean up this code somehow
 		
 		/**
 		 * Brian
@@ -392,6 +403,7 @@ class Attack extends Action
 		this.element = Game.NOELEMENT;
 		this.damageType = PHYSICAL;
 		this.hitRateMod = 0;
+		this.attacksWithWeapon = true; //obviously
 	}
 	
 	public double calculateDamage(Unit attack, Unit target)
@@ -468,6 +480,7 @@ class BrianPunch extends Action
 		this.element = Game.NOELEMENT;
 		this.damageType = PHYSICAL;
 		this.hitRateMod = 10;
+		this.attacksWithWeapon = false;
 	}
 	
 	public double calculateDamage(Unit attack, Unit target)
@@ -493,6 +506,7 @@ class BrianSmash extends Action
 		this.element = Game.NOELEMENT;
 		this.damageType = PHYSICAL;
 		this.hitRateMod = 10;
+		this.attacksWithWeapon = false;
 	}
 	
 	public double calculateDamage(Unit attack, Unit target)
@@ -518,6 +532,7 @@ class CheezItBlast extends Action
 		this.element = Game.SNACK;
 		this.damageType = MAGICAL;
 		this.hitRateMod = 30;
+		this.attacksWithWeapon = false;
 	}
 	
 	public double calculateDamage(Unit attack, Unit target)
@@ -543,6 +558,7 @@ class CoolRanchLaser extends Action
 		this.element = Game.SNACK;
 		this.damageType = MAGICAL;
 		this.hitRateMod = 30;
+		this.attacksWithWeapon = false;
 	}
 	
 	public double calculateDamage(Unit attack, Unit target)
@@ -568,6 +584,7 @@ class FlavorExplosion extends Action
 		this.element = Game.SNACK;
 		this.damageType = MAGICAL;
 		this.hitRateMod = 30;
+		this.attacksWithWeapon = false;
 	}
 	
 	public double calculateDamage(Unit attack, Unit target)
@@ -686,6 +703,7 @@ class Barf extends Action
 		this.element = Game.POISON;
 		this.damageType = MAGICAL;
 		this.hitRateMod = 10;
+		this.attacksWithWeapon = false;
 	}
 	
 	public double calculateDamage(Unit attack, Unit target)
@@ -711,6 +729,7 @@ class Flail extends Action
 		this.element = Game.NOELEMENT;
 		this.damageType = PHYSICAL;
 		this.hitRateMod = 10;
+		this.attacksWithWeapon = true;
 	}
 	
 	public double calculateDamage(Unit attack, Unit target)
@@ -772,6 +791,7 @@ class Shriek extends Action
 		this.element = Game.NOELEMENT;
 		this.damageType = MAGICAL;
 		this.hitRateMod = 10;
+		this.attacksWithWeapon = false;
 	}
 	
 	public double calculateDamage(Unit attack, Unit target)
@@ -815,6 +835,7 @@ class Kamikaze extends Action
 		this.element = Game.NOELEMENT;
 		this.damageType = PHYSICAL;
 		this.hitRateMod = 10;
+		this.attacksWithWeapon = false; //TODO: should this be true? weapon atk is used in the damage formula, but seems like a non-weapon attack
 	}
 	
 	public double calculateDamage(Unit attack, Unit target)
@@ -840,6 +861,7 @@ class VomitEruption extends Action
 		this.element = Game.POISON;
 		this.damageType = MAGICAL;
 		this.hitRateMod = 10;
+		this.attacksWithWeapon = false;
 	}
 	
 	public double calculateDamage(Unit attack, Unit target)
@@ -868,6 +890,7 @@ class SummonTrains extends Action
 		this.element = Game.NOELEMENT;
 		this.damageType = PHYSICAL;
 		this.hitRateMod = 20;
+		this.attacksWithWeapon = false;
 	}
 	
 	public double calculateDamage(Unit attack, Unit target)
@@ -938,6 +961,7 @@ class MysteriousMelody extends Action
 		this.element = Game.NOELEMENT;
 		this.damageType = MAGICAL;
 		this.hitRateMod = 20;
+		this.attacksWithWeapon = false;
 	}
 	
 	public double calculateDamage(Unit attack, Unit target)
@@ -963,6 +987,7 @@ class BajaBlast extends Action
 		this.element = Game.WATER;
 		this.damageType = MAGICAL;
 		this.hitRateMod = 20;
+		this.attacksWithWeapon = false;
 	}
 	
 	public double calculateDamage(Unit attack, Unit target)
@@ -1096,6 +1121,7 @@ class Shuriken extends Action
 		this.element = Game.NOELEMENT;
 		this.damageType = PHYSICAL;
 		this.hitRateMod = 999; //never miss
+		this.attacksWithWeapon = false;
 	}
 	
 	public double calculateDamage(Unit attack, Unit target)
@@ -1193,6 +1219,7 @@ class NinjutsuSlice extends Action
 		this.element = Game.NOELEMENT;
 		this.damageType = PHYSICAL;
 		this.hitRateMod = 10;
+		this.attacksWithWeapon = true;
 	}
 	
 	public double calculateDamage(Unit attack, Unit target)
@@ -1218,6 +1245,7 @@ class SamuraiSlash extends Action
 		this.element = Game.NOELEMENT;
 		this.damageType = PHYSICAL;
 		this.hitRateMod = 10;
+		this.attacksWithWeapon = true;
 	}
 	
 	public double calculateDamage(Unit attack, Unit target)
@@ -1243,6 +1271,7 @@ class BushidoBlade extends Action
 		this.element = Game.NOELEMENT;
 		this.damageType = PHYSICAL;
 		this.hitRateMod = 10;
+		this.attacksWithWeapon = true;
 	}
 	
 	public double calculateDamage(Unit attack, Unit target)
@@ -1270,6 +1299,7 @@ class Muramasamara extends Action
 		this.element = Game.NOELEMENT;
 		this.damageType = PHYSICAL;
 		this.hitRateMod = -50;
+		this.attacksWithWeapon = true;
 	}
 	
 	public double calculateDamage(Unit attack, Unit target)
@@ -1299,6 +1329,7 @@ class Fire extends Action
 		this.element = Game.FIRE;
 		this.damageType = MAGICAL;
 		this.hitRateMod = 10;
+		this.attacksWithWeapon = false;
 	}
 	
 	public double calculateDamage(Unit attack, Unit target)
@@ -1324,6 +1355,7 @@ class BigFire extends Action
 		this.element = Game.FIRE;
 		this.damageType = MAGICAL;
 		this.hitRateMod = 10;
+		this.attacksWithWeapon = false;
 	}
 	
 	public double calculateDamage(Unit attack, Unit target)
@@ -1349,6 +1381,7 @@ class LightningBolt extends Action
 		this.element = Game.LIGHTNING;
 		this.damageType = MAGICAL;
 		this.hitRateMod = 10;
+		this.attacksWithWeapon = false;
 	}
 	
 	public double calculateDamage(Unit attack, Unit target)
@@ -1374,6 +1407,7 @@ class LightningStorm extends Action
 		this.element = Game.LIGHTNING;
 		this.damageType = MAGICAL;
 		this.hitRateMod = 10;
+		this.attacksWithWeapon = false;
 	}
 	
 	public double calculateDamage(Unit attack, Unit target)
@@ -1399,6 +1433,7 @@ class EarthSpike extends Action
 		this.element = Game.EARTH;
 		this.damageType = MAGICAL;
 		this.hitRateMod = 10;
+		this.attacksWithWeapon = false;
 	}
 	
 	public double calculateDamage(Unit attack, Unit target)
@@ -1424,6 +1459,7 @@ class Earthquake extends Action
 		this.element = Game.EARTH;
 		this.damageType = MAGICAL;
 		this.hitRateMod = 10;
+		this.attacksWithWeapon = false;
 	}
 	
 	public double calculateDamage(Unit attack, Unit target)
@@ -1447,6 +1483,13 @@ class Steal extends Action
 		this.damageFrame = 0;
 		
 		this.element = Game.NOELEMENT;
+	}
+	
+	public double calculateDamage(Unit attack, Unit target)
+	{
+		Action attackAction = new Attack();
+		
+		return attackAction.calculateDamage(attack, target) / 2; //half Attack damage
 	}
 }
 
@@ -1503,6 +1546,7 @@ class CatScratch extends Action
 		this.element = Game.NOELEMENT;
 		this.damageType = PHYSICAL;
 		this.hitRateMod = 10;
+		this.attacksWithWeapon = false;
 	}
 	
 	public double calculateDamage(Unit attack, Unit target)
@@ -1528,6 +1572,7 @@ class Devour extends Action
 		this.element = Game.NOELEMENT;
 		this.damageType = PHYSICAL;
 		this.hitRateMod = 10;
+		this.attacksWithWeapon = false;
 	}
 	
 	public double calculateDamage(Unit attack, Unit target)

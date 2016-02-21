@@ -59,7 +59,7 @@ public class PassiveSkill
 	
 	//Kev-Bot
 	public static final int SCAN = 42;						//Show enemy HP in battle
-	public static final int RNGDEFENSE = 43;				//Randomizes defense (0.5x-1.5x)
+	public static final int RNGDEFENSES = 43;				//Randomizes damage taken (0.5x-1.5x)
 	public static final int DESTROYHUMANS = 44;				//Deal increased damage to Human targets
 	public static final int LIGHTNINGELEMENTRESIST = 45;	//Raises Lightning element resistance (% based on Dex)
 	public static final int LIGHTNINGELEMENTATTACK = 46;	//Makes attacks do Lightning element damage (% based on Dex)
@@ -168,7 +168,7 @@ public class PassiveSkill
 			
 			//Kev-Bot
 			case SCAN: return new Scan(currentSP, learned, equipped);
-			case RNGDEFENSE: return new RNGDefense(currentSP, learned, equipped);
+			case RNGDEFENSES: return new RNGDefenses(currentSP, learned, equipped);
 			case DESTROYHUMANS: return new DestroyHumans(currentSP, learned, equipped);
 			case LIGHTNINGELEMENTRESIST: return new LightningElementResist(currentSP, learned, equipped);
 			case LIGHTNINGELEMENTATTACK: return new LightningElementAttack(currentSP, learned, equipped);
@@ -991,7 +991,7 @@ class DrainLife extends PassiveSkill
 	
 	public void process(Unit character)
 	{
-		//look at this in Game.calculateDamage()
+		//checks this in Game.doBattleCalculations()
 	}
 	
 	public boolean canLearn(Unit character)
@@ -1113,7 +1113,7 @@ class MeScared extends PassiveSkill
 	
 	public void process(Unit character)
 	{
-		//looks at this when fleeing
+		//looks at this when calculating flee rate
 	}
 	
 	public boolean canLearn(Unit character)
@@ -1153,7 +1153,7 @@ class Miracle extends PassiveSkill
 	
 	public void process(Unit character)
 	{
-		//looks at this when taking damage
+		//looks at this in Unit.doDamage()
 	}
 	
 	public boolean canLearn(Unit character)
@@ -1273,6 +1273,8 @@ class Enlightenment extends PassiveSkill
 	
 	public void process(Unit character)
 	{
+		//TODO: use different stat formulas entirely?
+		
 		character.maxHp *= 1.2;
 		character.maxMp *= 1.2;
 		character.str += 3;
@@ -1400,7 +1402,7 @@ class MPAttack extends PassiveSkill
 	
 	public void process(Unit character)
 	{
-		//looks at this in Game.calculateDamage() 
+		//looks at this in Game.calculateDamage() and when checking for action's MP cost
 	}
 	
 	public boolean canLearn(Unit character)
@@ -1905,18 +1907,18 @@ class Scan extends PassiveSkill
 	}
 }
 
-class RNGDefense extends PassiveSkill
+class RNGDefenses extends PassiveSkill
 {
-	public RNGDefense()
+	public RNGDefenses()
 	{
 		this(0, false, false);
 	}
 	
-	public RNGDefense(int currentSP, boolean learned, boolean equipped)
+	public RNGDefenses(int currentSP, boolean learned, boolean equipped)
 	{
-		this.id = RNGDEFENSE;
-		this.name = "RNG Defense";
-		this.desc = "Randomizes Defense when taking physical damage.";
+		this.id = RNGDEFENSES;
+		this.name = "RNG Defenses";
+		this.desc = "Randomizes damage taken (0.5x - 1.5x).";
 		this.cubeCost = 2;
 		
 		this.currentSP = currentSP;

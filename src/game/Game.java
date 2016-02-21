@@ -112,7 +112,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 	public boolean moveSouth = false;
 	public boolean moveWest = false;
 	
-	public Unit[] party;
+	public static Unit[] party;
 	public Unit placeholderCharacter;
 	public ArrayList<Unit> monsters;
 	
@@ -137,7 +137,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 	
 	public int direction;
 	
-	static int wildRate;
+	static int stepsWithoutBattle; //used with "encounter threshold" - guarantee a certain number of steps without battle
 	
 	public static ImageIcon icon;
 	public static Image img;
@@ -482,7 +482,10 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		setState(TITLESCREEN);
 		
 		party = new Unit[8]; //6 party members, 2 extra space in case 1 in party and 5 in "storage"
-		for(int i=0; i<party.length; i++) party[i] = new None();
+		for(int i=0; i<party.length; i++)
+		{
+			party[i] = new None(i);
+		}
 		
 		afterBattleAlerts = new ArrayList<AfterBattleAlert>();
 		
@@ -585,7 +588,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		return stringMoney;
 	}
 	
-	public int getTotalExpGain()
+	public int getTotalExpGain(Unit unit)
 	{
 		if(monsters == null)
 		{
@@ -598,10 +601,15 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			totalExp += monsters.get(i).expGain;
 		}
 		
+		if(unit.hasEquippedPassiveSkill(PassiveSkill.EXPBOOST))
+		{
+			totalExp *= 1.5;
+		}
+		
 		return totalExp;
 	}
 	
-	public int getTotalSPGain()
+	public int getTotalSPGain(Unit unit)
 	{
 		if(monsters == null)
 		{
@@ -616,6 +624,11 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		
 		int actualTotalSP = (int) totalSP;
 		if(actualTotalSP < 1) actualTotalSP = 1;
+		
+		if(unit.hasEquippedPassiveSkill(PassiveSkill.SPBOOST))
+		{
+			actualTotalSP *= 2;
+		}
 		
 		return actualTotalSP;
 	}
@@ -633,6 +646,11 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			totalMoney += monsters.get(i).moneyGain;
 		}
 		
+		if(partyHasEquippedPassiveSkill(PassiveSkill.PAYDAY))
+		{
+			totalMoney *= 1.5;
+		}
+		
 		return totalMoney;
 	}
 	
@@ -640,7 +658,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 	{
 		int[] loopPoints = new int[2];
 		
-		//TODO
+		//TODO: when the music exists, add the loop points here
 		
 		if(name.equals("Main Menu"))
 		{
@@ -1416,6 +1434,16 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			g.setFont(arialBold16);
 			g.drawString(monsters.get(i).species,595,550+27*i);
 			
+			if(partyHasEquippedPassiveSkill(PassiveSkill.SCAN))
+			{
+				g.setFont(arialBold12);
+				g.setColor(Color.BLACK);
+				drawStringRightAligned(""+monsters.get(i).hp,700,548+27*i,g);
+				
+				double hpBarLength = 100.0*((double)monsters.get(i).hp/monsters.get(i).maxHp);
+				if(hpBarLength < 1) hpBarLength = 1;
+				drawBar(710,540+27*i,104,10,(int)hpBarLength,healthColor(monsters.get(i)),g);
+			}
 		}
 		
 		/**
@@ -1474,7 +1502,10 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				g.setColor(Color.BLACK);
 				g.fillRect(x-2,68,154,154);
 				
-				if(prevState == BATTLEFLED && party[i].hp > 0) draw("port" + party[i].name + "Fled",x,70,g);
+				if(prevState == BATTLEFLED && party[i].hp > 0)
+				{
+					draw("port" + party[i].name + "Fled",x,70,g);
+				}
 				else draw("port" + party[i].name,x,70,g);
 				
 				if(party[i].hp == 0) draw("dead",x,70,g);
@@ -1489,13 +1520,11 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					if(party[i].hp > 0)
 					{
 						g.setFont(arialBold14);
-						message = "Gained " + getTotalExpGain() + " exp.";
+						message = "Gained " + getTotalExpGain(party[i]) + " exp.";
 						width = getStringWidth(message,g);
 						g.drawString(message,x+75-width/2,270);
 						
-						int totalCubes = getTotalSPGain();
-						if(totalCubes == 1) message = "Gained " + getTotalSPGain() + " SP.";
-						else message = "Gained " + getTotalSPGain() + " SP.";
+						message = "Gained " + getTotalSPGain(party[i]) + " SP.";
 						width = getStringWidth(message,g);
 						g.drawString(message,x+75-width/2,295);
 						
@@ -2040,7 +2069,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			}
 		}
 		
-		if(actionObj.element != NOELEMENT)
+		if(actionObj.element != NOELEMENT) //TODO: for ghosts, can return 0 if the attack is physical
 		{
 			if(target.elementResistance[actionObj.element] == 100) return 0;
 		}
@@ -2083,14 +2112,58 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			}
 		}
 		
-		if(actionObj.element != NOELEMENT)
+		if(actionObj.element != NOELEMENT) //attack is 100% one element
 		{
 			ddmg -= ddmg*(target.elementResistance[actionObj.element]/100.0);
 			if(ddmg < 0 && ddmg > -1) ddmg = -1;
 		}
+		else if(actionObj.attacksWithWeapon) //may need to account for partial elemental attacks
+		{
+			int percentElemental = 20 + 3*attack.dex; //TODO: work on this formula
+			
+			if(attack.hasEquippedPassiveSkill(PassiveSkill.SNACKELEMENTATTACK))
+			{				
+				ddmg = ddmg*(percentElemental/100.0)*(1.0 - target.elementResistance[SNACK]) + ddmg*(1.0 - percentElemental/100.0);
+			}
+			else if(attack.hasEquippedPassiveSkill(PassiveSkill.EARTHELEMENTATTACK))
+			{
+				ddmg = ddmg*(percentElemental/100.0)*(1.0 - target.elementResistance[EARTH]) + ddmg*(1.0 - percentElemental/100.0);
+			}
+			else if(attack.hasEquippedPassiveSkill(PassiveSkill.WATERELEMENTATTACK))
+			{
+				ddmg = ddmg*(percentElemental/100.0)*(1.0 - target.elementResistance[WATER]) + ddmg*(1.0 - percentElemental/100.0);
+			}
+			else if(attack.hasEquippedPassiveSkill(PassiveSkill.FIREELEMENTATTACK))
+			{
+				ddmg = ddmg*(percentElemental/100.0)*(1.0 - target.elementResistance[FIRE]) + ddmg*(1.0 - percentElemental/100.0);
+			}
+			else if(attack.hasEquippedPassiveSkill(PassiveSkill.POISONELEMENTATTACK))
+			{
+				ddmg = ddmg*(percentElemental/100.0)*(1.0 - target.elementResistance[POISON]) + ddmg*(1.0 - percentElemental/100.0);
+			}
+			else if(attack.hasEquippedPassiveSkill(PassiveSkill.LIGHTNINGELEMENTATTACK))
+			{
+				ddmg = ddmg*(percentElemental/100.0)*(1.0 - target.elementResistance[LIGHTNING]) + ddmg*(1.0 - percentElemental/100.0);
+			}
+			
+			//TODO: would also want to handle elemental weapons (if they exist)
+		}
 		
 		if(action == Action.ATTACK)
 		{
+			if(attack.hasEquippedPassiveSkill(PassiveSkill.MPATTACK))
+			{
+				int mpCost = 3 + (int)(attack.maxMp/20.0); //TODO: work on both of these values
+				double mod = 1.5;
+				
+				if(attack.mp < mpCost)
+				{
+					mod = 1.0 + 0.5*((double)attack.mp / (double)mpCost);
+				}
+							
+				ddmg *= mod;
+			}
+			
 			if(rand.nextInt(100) < attack.critRate)
 			{
 				ddmg *= 2.0;
@@ -2105,6 +2178,37 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			{
 				if(target.hp/2 > ddmg) ddmg = target.hp/2;
 			}
+		}
+		
+		if(attack.hasEquippedPassiveSkill(PassiveSkill.SOLOARTIST))
+		{
+			boolean isOnlyPartyMember = true;
+			
+			if(party != null)
+			{
+				for(int i=0; i<3; i++)
+				{
+					if(i != attack.index && party[i].existsAndAlive())
+					{
+						isOnlyPartyMember = false;
+					}
+				}
+			}
+			
+			if(isOnlyPartyMember)
+			{
+				ddmg *= 1.75; //TODO: adjust this if necessary
+			}
+		}
+		
+		//TODO: for stuff like Destroy Humans, check the "enemy type" here and increase damage.
+		//Should have a passive skill for most enemy types. Right now enemy types don't exist.
+		
+		if(target.hasEquippedPassiveSkill(PassiveSkill.RNGDEFENSES))
+		{
+			double dmgMod = (rand.nextInt(100) + 50)/100.0; //random between 0.5 and 1.5
+			
+			ddmg *= dmgMod;
 		}
 		
 		value = (int) ddmg;
@@ -2378,7 +2482,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				else g.setColor(Color.GRAY);
 				
 				g.drawString(currentUnit.getLearnedActiveSkills().get(i).action.name,330,550+27*(i-top));
-				drawStringRightAligned(currentUnit.getLearnedActiveSkills().get(i).action.mp + " MP",535,550+27*(i-top),g);
+				drawStringRightAligned(currentUnit.getLearnedActiveSkills().get(i).action.getMPCost(currentUnit) + " MP",535,550+27*(i-top),g);
 			}
 			
 			if(numActiveSkills > 4)
@@ -2659,9 +2763,18 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		
 		try
 		{
-			if(curEvent.type == Event.CHEST) draw("npcPortChest","npc",365,120,g);
-			else if(curEvent.name.equals("Sign")) draw("npcPortSign","npc",365,120,g);
-			else draw("npcPort" + curEvent.imageName,"npc",365,120,g);	
+			if(curEvent.type == Event.CHEST)
+			{
+				draw("npcPortChest","npc",365,120,g);
+			}
+			else if(curEvent.name.equals("Sign"))
+			{
+				draw("npcPortSign","npc",365,120,g);
+			}
+			else
+			{
+				draw("npcPort" + curEvent.imageName,"npc",365,120,g);	
+			}
 		}
 		catch(Exception e)
 		{
@@ -2670,8 +2783,14 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		
 		g.setColor(Color.BLACK);
 		g.setFont(arialBold16);
-		if(curEvent.type == Event.NPC) g.drawString(curEvent.name,485,130);
-		else if(curEvent.type == Event.CHEST) g.drawString("Item",485,130);
+		if(curEvent.type == Event.NPC)
+		{
+			g.drawString(curEvent.name,485,130);
+		}
+		else if(curEvent.type == Event.CHEST)
+		{
+			g.drawString("Item",485,130);
+		}
 		
 		g.setColor(Color.BLACK);
 		g.fillRect(480,150,225,75);
@@ -3721,7 +3840,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			for(int i=top; i<=bottom; i++)
 			{
 				g.drawString(party[partyIndex].getLearnedActiveSkills().get(i).action.name,75,305+35*(i-top));
-				drawStringRightAligned(party[partyIndex].getLearnedActiveSkills().get(i).action.mp + " MP",350,305+35*(i-top),g);
+				drawStringRightAligned(party[partyIndex].getLearnedActiveSkills().get(i).action.getMPCost(party[partyIndex]) + " MP",350,305+35*(i-top),g);
 			}
 			
 			draw("pointer",33,285+35*(curIndex()-top),g);
@@ -3804,7 +3923,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			for(int i=top; i<=bottom; i++)
 			{
 				g.drawString(party[partyIndex].getLearnedActiveSkills().get(i).action.name,75,305+35*(i-top));
-				drawStringRightAligned(party[partyIndex].getLearnedActiveSkills().get(i).action.mp + " MP",350,305+35*(i-top),g);
+				drawStringRightAligned(party[partyIndex].getLearnedActiveSkills().get(i).action.getMPCost(party[partyIndex]) + " MP",350,305+35*(i-top),g);
 			}
 		}
 		else if(state == SKILLMENUSEL)
@@ -3826,7 +3945,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			for(int i=top; i<=bottom; i++)
 			{
 				g.drawString(party[partyIndex].getLearnedActiveSkills().get(i).action.name,75,305+35*(i-top));
-				drawStringRightAligned(party[partyIndex].getLearnedActiveSkills().get(i).action.mp + " MP",350,305+35*(i-top),g);
+				drawStringRightAligned(party[partyIndex].getLearnedActiveSkills().get(i).action.getMPCost(party[partyIndex]) + " MP",350,305+35*(i-top),g);
 			}
 			
 			//draw passive skills (only the top 9)
@@ -3945,7 +4064,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 	{
 		try
 		{			
-			icon = new ImageIcon(getClass().getResource("img/" + name + ".PNG")); //TODO: check for png as well?
+			icon = new ImageIcon(getClass().getResource("img/" + name + ".PNG")); //TODO: check for lowercase png as well?
 			img = icon.getImage();
 			g.drawImage(img,x,y,this);
 		}
@@ -4269,7 +4388,11 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					}
 					else if(mapEvent.type == Event.CHEST)
 					{
-						draw("mapChest" + mapEvent.state,400+drawX*50+xOffset,300+drawY*50+yOffset,g);
+						//don't draw chests if they're unopened, hidden, and no party member has Cat Eyes
+						if(!(mapEvent.state == 0 && mapEvent.hidden && !partyHasEquippedPassiveSkill(PassiveSkill.CATEYES)))
+						{
+							draw("mapChest" + mapEvent.state,400+drawX*50+xOffset,300+drawY*50+yOffset,g);
+						}
 					}
 					else if(mapEvent.type == Event.ART)
 					{
@@ -4474,7 +4597,10 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		 * Basics
 		 */
 		int characterID = Integer.parseInt((String) a.get(0));
-		if(characterID == -1) return new None();
+		if(characterID == -1)
+		{
+			return new None(index);
+		}
 		
 		int level = Integer.parseInt((String) a.get(1));
 		int exp = Integer.parseInt((String) a.get(2));
@@ -4711,13 +4837,13 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		}
 
 		writeCharacter(new Brian(1,0),outputParty0);
-		writeCharacter(new None(),outputParty1);
-		writeCharacter(new None(),outputParty2);
-		writeCharacter(new None(),outputParty3);
-		writeCharacter(new None(),outputParty4);
-		writeCharacter(new None(),outputParty5);
-		writeCharacter(new None(),outputParty6);
-		writeCharacter(new None(),outputParty7);
+		writeCharacter(new None(1),outputParty1);
+		writeCharacter(new None(2),outputParty2);
+		writeCharacter(new None(0),outputParty3);
+		writeCharacter(new None(0),outputParty4);
+		writeCharacter(new None(0),outputParty5);
+		writeCharacter(new None(0),outputParty6);
+		writeCharacter(new None(0),outputParty7);
 		
 		inventory = new ArrayList<Item>();
 		writeInventory(outputInventory);
@@ -4960,7 +5086,10 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				Unit target = getUnitFromTargetIndex(battleAction.targets.get(i));
 				ArrayList<Integer> valuesToApply = new ArrayList<Integer>();
 				valuesToApply.add(i);
-				if(battleAction.values.size() == battleAction.targets.size()*2) valuesToApply.add(i+battleAction.values.size()/2);
+				if(battleAction.values.size() == battleAction.targets.size()*2) //2 values for the same target, so multiple effects to apply (like Purr healing both HP and MP)
+				{
+					valuesToApply.add(i+battleAction.values.size()/2);
+				}
 				
 				for(int j=0; j<valuesToApply.size(); j++)
 				{
@@ -5000,116 +5129,192 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					}
 				}
 				
-				if(battleAction.action == Action.BARF || battleAction.action == Action.VOMITERUPTION)
+				if(target.hp > 0) //only care about inflicting status if the target is alive
 				{
-					if(battleAction.inflictStatus.get(i))
+					if(battleAction.action == Action.BARF || battleAction.action == Action.VOMITERUPTION)
 					{
-						target.inflictStatus(Unit.POISON);
+						if(battleAction.inflictStatus.get(i))
+						{
+							target.inflictStatus(Unit.POISON);
+						}
 					}
-				}
-				else if(battleAction.action == Action.SHRIEK)
-				{
-					if(battleAction.inflictStatus.get(i))
+					else if(battleAction.action == Action.SHRIEK)
 					{
-						target.inflictStatus(Unit.SILENCE);
+						if(battleAction.inflictStatus.get(i))
+						{
+							target.inflictStatus(Unit.SILENCE);
+						}
 					}
-				}
-				else if(battleAction.action == Action.GOTTAGOFAST || battleAction.action == Action.GOTTAGOFASTER)
-				{
-					if(battleAction.inflictStatus.get(i))
+					else if(battleAction.action == Action.GOTTAGOFAST || battleAction.action == Action.GOTTAGOFASTER)
 					{
-						target.inflictStatus(Unit.HASTE,7);
+						if(battleAction.inflictStatus.get(i))
+						{
+							target.inflictStatus(Unit.HASTE,7);
+						}
 					}
-				}
-				else if(battleAction.action == Action.ANNOY)
-				{
-					if(battleAction.inflictStatus.get(i))
+					else if(battleAction.action == Action.ANNOY)
 					{
-						target.inflictStatus(Unit.BERSERK,7);
+						if(battleAction.inflictStatus.get(i))
+						{
+							target.inflictStatus(Unit.BERSERK,7);
+						}
 					}
-				}
-				else if(battleAction.action == Action.COWER)
-				{
-					if(battleAction.inflictStatus.get(i))
+					else if(battleAction.action == Action.COWER)
 					{
-						target.inflictStatus(Unit.DEFEND);
+						if(battleAction.inflictStatus.get(i))
+						{
+							target.inflictStatus(Unit.DEFEND);
+						}
 					}
-				}
-				else if(battleAction.action == Action.BLESSINGOFARINO)
-				{
-					if(battleAction.inflictStatus.get(i))
+					else if(battleAction.action == Action.BLESSINGOFARINO)
 					{
-						target.inflictStatus(Unit.ATKUP,7);
+						if(battleAction.inflictStatus.get(i))
+						{
+							target.inflictStatus(Unit.ATKUP,7);
+						}
 					}
-				}
-				else if(battleAction.action == Action.SILLYDANCE)
-				{
-					if(battleAction.inflictStatus.get(i))
+					else if(battleAction.action == Action.SILLYDANCE)
 					{
-						target.inflictStatus(Unit.EVADE,7);
+						if(battleAction.inflictStatus.get(i))
+						{
+							target.inflictStatus(Unit.EVADE,7);
+						}
 					}
-				}
-				else if(battleAction.action == Action.AMP)
-				{
-					if(battleAction.inflictStatus.get(i))
+					else if(battleAction.action == Action.AMP)
 					{
-						target.inflictStatus(Unit.AMP,7);
+						if(battleAction.inflictStatus.get(i))
+						{
+							target.inflictStatus(Unit.AMP,7);
+						}
 					}
-				}
-				else if(battleAction.action == Action.BAJABLAST)
-				{
-					if(battleAction.inflictStatus.get(i))
+					else if(battleAction.action == Action.BAJABLAST)
 					{
-						target.inflictStatus(Unit.SLOW,5);
+						if(battleAction.inflictStatus.get(i))
+						{
+							target.inflictStatus(Unit.SLOW,5);
+						}
 					}
-				}
-				else if(battleAction.action == Action.BLESSINGOFMIKU)
-				{
-					if(battleAction.inflictStatus.get(i))
+					else if(battleAction.action == Action.BLESSINGOFMIKU)
 					{
-						target.inflictStatus(Unit.REGEN,10);
+						if(battleAction.inflictStatus.get(i))
+						{
+							target.inflictStatus(Unit.REGEN,10);
+						}
 					}
-				}
-				else if(battleAction.action == Action.BLUESHIELD || battleAction.action == Action.BLUEBARRIER)
-				{
-					if(battleAction.inflictStatus.get(i))
+					else if(battleAction.action == Action.BLUESHIELD || battleAction.action == Action.BLUEBARRIER)
 					{
-						target.inflictStatus(Unit.SHELL,7);
+						if(battleAction.inflictStatus.get(i))
+						{
+							target.inflictStatus(Unit.SHELL,7);
+						}
 					}
-				}
-				else if(battleAction.action == Action.KAGESHADOWS)
-				{
-					if(battleAction.inflictStatus.get(i))
+					else if(battleAction.action == Action.KAGESHADOWS)
 					{
-						target.inflictStatus(Unit.BLIND,7);
+						if(battleAction.inflictStatus.get(i))
+						{
+							target.inflictStatus(Unit.BLIND,7);
+						}
 					}
-				}
-				else if(battleAction.action == Action.DEFENDHONOR || battleAction.action == Action.HONORFORALL)
-				{
-					if(battleAction.inflictStatus.get(i))
+					else if(battleAction.action == Action.DEFENDHONOR || battleAction.action == Action.HONORFORALL)
 					{
-						target.inflictStatus(Unit.PROTECT,7);
+						if(battleAction.inflictStatus.get(i))
+						{
+							target.inflictStatus(Unit.PROTECT,7);
+						}
 					}
-				}
-				else if(battleAction.action == Action.INFLICTSHAME)
-				{
-					if(battleAction.inflictStatus.get(i))
+					else if(battleAction.action == Action.INFLICTSHAME)
 					{
-						target.inflictStatus(Unit.SHAME,5);
+						if(battleAction.inflictStatus.get(i))
+						{
+							target.inflictStatus(Unit.SHAME,5);
+						}
 					}
-				}
-				else if(battleAction.action == Action.CATNAP)
-				{
-					if(battleAction.inflictStatus.get(i))
+					else if(battleAction.action == Action.CATNAP)
 					{
-						target.inflictStatus(Unit.SLEEP,5);
+						if(battleAction.inflictStatus.get(i))
+						{
+							target.inflictStatus(Unit.SLEEP,5);
+						}
 					}
-				}
-				else if(battleAction.action == Action.CATSCRATCH)
-				{
-					if(battleAction.inflictStatus.get(i))
+					else if(battleAction.action == Action.CATSCRATCH)
 					{
-						target.inflictStatus(Unit.BLIND);
+						if(battleAction.inflictStatus.get(i))
+						{
+							target.inflictStatus(Unit.BLIND);
+						}
+					}
+					
+					/**
+					 * Check passive skills that inflict status
+					 */
+					if(battleAction.user.hasEquippedPassiveSkill(PassiveSkill.INFLICTSTATUSPOISON))
+					{
+						int statusChance = 20 + 3*battleAction.user.dex; //TODO: work on this formula
+
+						if(rand.nextInt(100) < target.getStatusChance(battleAction.user,Unit.POISON,statusChance))
+						{
+							target.inflictStatus(Unit.POISON);
+						}
+					}
+
+					if(battleAction.user.hasEquippedPassiveSkill(PassiveSkill.INFLICTSTATUSSILENCE))
+					{
+						int statusChance = 20 + 3*battleAction.user.dex; //TODO: work on this formula
+
+						if(rand.nextInt(100) < target.getStatusChance(battleAction.user,Unit.SILENCE,statusChance))
+						{
+							target.inflictStatus(Unit.SILENCE);
+						}
+					}
+					
+					if(battleAction.user.hasEquippedPassiveSkill(PassiveSkill.INFLICTSTATUSBLIND))
+					{
+						int statusChance = 20 + 3*battleAction.user.dex; //TODO: work on this formula
+
+						if(rand.nextInt(100) < target.getStatusChance(battleAction.user,Unit.BLIND,statusChance))
+						{
+							target.inflictStatus(Unit.BLIND);
+						}
+					}
+					
+					if(battleAction.user.hasEquippedPassiveSkill(PassiveSkill.INFLICTSTATUSSLEEP))
+					{
+						int statusChance = 20 + 3*battleAction.user.dex; //TODO: work on this formula
+
+						if(rand.nextInt(100) < target.getStatusChance(battleAction.user,Unit.SLEEP,statusChance))
+						{
+							target.inflictStatus(Unit.SLEEP);
+						}
+					}
+					
+					if(battleAction.user.hasEquippedPassiveSkill(PassiveSkill.INFLICTSTATUSSLOW))
+					{
+						int statusChance = 20 + 3*battleAction.user.dex; //TODO: work on this formula
+
+						if(rand.nextInt(100) < target.getStatusChance(battleAction.user,Unit.SLOW,statusChance))
+						{
+							target.inflictStatus(Unit.SLOW);
+						}
+					}
+					
+					if(battleAction.user.hasEquippedPassiveSkill(PassiveSkill.INFLICTSTATUSBERSERK))
+					{
+						int statusChance = 20 + 3*battleAction.user.dex; //TODO: work on this formula
+
+						if(rand.nextInt(100) < target.getStatusChance(battleAction.user,Unit.BERSERK,statusChance))
+						{
+							target.inflictStatus(Unit.BERSERK);
+						}
+					}
+					
+					if(battleAction.user.hasEquippedPassiveSkill(PassiveSkill.INFLICTSTATUSSHAME))
+					{
+						int statusChance = 20 + 3*battleAction.user.dex; //TODO: work on this formula
+
+						if(rand.nextInt(100) < target.getStatusChance(battleAction.user,Unit.SHAME,statusChance))
+						{
+							target.inflictStatus(Unit.SHAME);
+						}
 					}
 				}
 				
@@ -5422,6 +5627,25 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			{
 				if(values.get(i) > 0) animation[targets.get(i)] = DAMAGED;
 			}
+			
+			if(user.hasEquippedPassiveSkill(PassiveSkill.DRAINLIFE))
+			{
+				if(values.get(0) > 0)
+				{
+					targets.add(currentUnit.getBattleIndex());
+					values.add(-1*(values.get(0)/2));
+					mp.add(false);
+					critArray.add(false);
+					missArray.add(false);
+				}
+			}
+
+			if(user.hasEquippedPassiveSkill(PassiveSkill.MPATTACK))
+			{
+				user.mp -= (3 + (int)(user.maxMp/20.0)); //TODO: if MP Attack's cost is adjusted, adjust it here as well
+				
+				if(user.mp < 0) user.mp = 0;
+			}
 		}
 		
 		/**
@@ -5532,7 +5756,10 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				}
 			}
 			
-			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).mp;
+			if(user.unitType == Unit.CHARACTER)
+			{
+				user.mp -= Action.actionFromID(action).getMPCost(user);
+			}
 		}
 		
 		/**
@@ -5616,7 +5843,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			
 			animation[user.getBattleIndex()] = Action.MTNDEWWAVE;
 			
-			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).mp;
+			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).getMPCost(user);
 		}		
 		else if(action == Action.EATPOPTART)
 		{
@@ -5628,7 +5855,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			
 			mp.add(false);
 			
-			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).mp;
+			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).getMPCost(user);
 		}
 		else if(action == Action.RADICALRIFF) //TODO: work on this formula
 		{
@@ -5643,7 +5870,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				mp.add(true);
 			}
 			
-			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).mp;
+			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).getMPCost(user);
 		}
 		else if(action == Action.CHIPTUNEOFLIFE)
 		{
@@ -5663,7 +5890,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			
 			mp.add(false);
 			
-			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).mp;
+			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).getMPCost(user);
 		}
 		else if(action == Action.PURR) //TODO: heal formula
 		{
@@ -5685,7 +5912,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			
 			mp.add(true);
 			
-			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).mp;
+			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).getMPCost(user);
 		}
 		
 		/**
@@ -5707,7 +5934,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				}
 			}
 			
-			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).mp;
+			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).getMPCost(user);
 		}
 		else if(action == Action.ANNOY)
 		{
@@ -5725,7 +5952,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				missArray.add(true);
 			}
 			
-			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).mp;
+			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).getMPCost(user);
 		}
 		else if(action == Action.COWER)
 		{
@@ -5740,7 +5967,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				missArray.add(true);
 			}
 			
-			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).mp;
+			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).getMPCost(user);
 		}
 		else if(action == Action.BLESSINGOFARINO)
 		{
@@ -5755,7 +5982,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				missArray.add(true);
 			}
 			
-			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).mp;
+			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).getMPCost(user);
 		}
 		else if(action == Action.SILLYDANCE)
 		{
@@ -5770,7 +5997,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				missArray.add(true);
 			}
 			
-			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).mp;
+			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).getMPCost(user);
 		}
 		else if(action == Action.AMP)
 		{
@@ -5785,7 +6012,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				missArray.add(true);
 			}
 			
-			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).mp;
+			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).getMPCost(user);
 		}
 		else if(action == Action.BLESSINGOFMIKU)
 		{
@@ -5803,7 +6030,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				}
 			}
 			
-			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).mp;
+			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).getMPCost(user);
 		}
 		else if(action == Action.BLUESHIELD || action == Action.BLUEBARRIER)
 		{
@@ -5821,7 +6048,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				}
 			}
 			
-			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).mp;
+			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).getMPCost(user);
 		}
 		else if(action == Action.KAGESHADOWS)
 		{
@@ -5839,7 +6066,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				}
 			}
 			
-			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).mp;
+			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).getMPCost(user);
 		}
 		else if(action == Action.DEFENDHONOR || action == Action.HONORFORALL)
 		{
@@ -5857,7 +6084,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				}
 			}
 			
-			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).mp;
+			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).getMPCost(user);
 		}
 		else if(action == Action.INFLICTSHAME)
 		{
@@ -5872,7 +6099,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				missArray.add(true);
 			}
 			
-			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).mp;
+			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).getMPCost(user);
 		}
 		else if(action == Action.CATNAP)
 		{
@@ -5887,7 +6114,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				missArray.add(true);
 			}
 			
-			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).mp;
+			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).getMPCost(user);
 		}
 		
 		/**
@@ -5901,7 +6128,14 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			{
 				for(int i=0; i<target.stealItems.size(); i++)
 				{
-					if(rand.nextInt(100) < target.stealItemRates.get(i))
+					int stealItemRate = target.stealItemRates.get(i);
+					
+					if(user.hasEquippedPassiveSkill(PassiveSkill.CATBURGLAR))
+					{
+						stealItemRate *= 2; //TODO: adjust this if necessary
+					}
+					
+					if(rand.nextInt(100) < stealItemRate)
 					{
 						stealItem = target.stealItems.get(i);
 						stealOutcome = 1;
@@ -5914,7 +6148,19 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			}
 			else stealOutcome = -1;
 			
-			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).mp;
+			if(user.hasEquippedPassiveSkill(PassiveSkill.MUG)) //make Steal do damage
+			{
+				int dmgToAdd = calculateDamage(user, action, target, critTemp, missTemp);
+				
+				values.add(dmgToAdd);
+				mp.add(false);
+				critArray.add(critTemp.get(0));
+				missArray.add(missTemp.get(0));
+				
+				if(values.get(0) > 0) animation[targets.get(0)] = DAMAGED;
+			}
+			
+			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).getMPCost(user);
 		}
 		
 		/**
@@ -5923,20 +6169,34 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		else if(action == Action.HPITEM)
 		{
 			usedItem = inventory.get(prevIndex(1));
-			values.add(usedItem.amt * -1);
+			int itemAmt = usedItem.amt;
+			if(getUnitFromTargetIndex(targets.get(0)).hasEquippedPassiveSkill(PassiveSkill.ITEMADDICT))
+			{
+				itemAmt *= 1.5;
+			}
+			values.add(itemAmt * -1);
 			mp.add(false);
 		}
 		else if(action == Action.MPITEM)
 		{
 			usedItem = inventory.get(prevIndex(1));
-			values.add(usedItem.amt);
+			int itemAmt = usedItem.amt;
+			if(getUnitFromTargetIndex(targets.get(0)).hasEquippedPassiveSkill(PassiveSkill.ITEMADDICT))
+			{
+				itemAmt *= 1.5;
+			}
+			values.add(itemAmt);
 			mp.add(true);
 		}
 		else if(action == Action.REVIVEITEM)
 		{
 			usedItem = inventory.get(prevIndex(1));
-			double healAmount = getUnitFromTargetIndex(targets.get(0)).maxHp * (usedItem.amt/100.0);
-			values.add((int) healAmount * -1);
+			double healAmt = getUnitFromTargetIndex(targets.get(0)).maxHp * (usedItem.amt/100.0);
+			if(getUnitFromTargetIndex(targets.get(0)).hasEquippedPassiveSkill(PassiveSkill.ITEMADDICT))
+			{
+				healAmt *= 1.5;
+			}
+			values.add((int) healAmt * -1);
 			mp.add(false);
 		}
 		
@@ -6298,16 +6558,26 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				
 				changeMap(destMap, destX, destY);
 
-				wildRate = 0;
+				stepsWithoutBattle = 0;
 			}
 			else if(curMap.tile[curX][curY].hasMonsters && !skipMonsters && sliding == -1)
 			{
-				int encRate = 70; //TODO: was 4
-				int encThreshold = 1; //TODO: was 6
+				int encRate = 70; //TODO: was 4 (increased rate for testing purposes)
+				int encThreshold = 1; //TODO: was 6 (increased rate for testing purposes)
 				
-				if(wildRate > encThreshold && rand.nextInt(100) < encRate)
+				if(partyHasEquippedPassiveSkill(PassiveSkill.ENCOUNTERHALF))
 				{
-					//TODO
+					encRate /= 2; //cut the encounter rate in half
+					encThreshold *= 2; //double the number of steps guaranteed without a battle
+				}
+				
+				if(partyHasEquippedPassiveSkill(PassiveSkill.ENCOUNTERNONE))
+				{
+					encRate = 0; //no battles
+				}
+				
+				if(stepsWithoutBattle > encThreshold && rand.nextInt(100) < encRate)
+				{
 					monsters = curMap.getMonsters(curMap.tile[curX][curY].monsterListID);
 					for(int i=0; i<monsters.size(); i++)
 					{
@@ -6328,12 +6598,46 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					timer.schedule(new Task(),29*100); //29 frames, 100ms
 					newState = BATTLE;
 					
-					wildRate = 0;
+					stepsWithoutBattle = 0;
+					
+					/**
+					 * Check passive skills that add status at start of battle
+					 */
+					for(int i=0; i<3; i++)
+					{
+						if(party[i].existsAndAlive())
+						{
+							if(party[i].hasEquippedPassiveSkill(PassiveSkill.AUTOREGEN))
+							{
+								party[i].inflictStatus(Unit.REGEN,10);
+							}
+							
+							if(party[i].hasEquippedPassiveSkill(PassiveSkill.AUTOHASTE))
+							{
+								party[i].inflictStatus(Unit.HASTE,7);
+							}
+							
+							if(party[i].hasEquippedPassiveSkill(PassiveSkill.AUTOBERSERK))
+							{
+								party[i].inflictStatus(Unit.BERSERK,7);
+							}
+							
+							if(party[i].hasEquippedPassiveSkill(PassiveSkill.AUTOPROTECT))
+							{
+								party[i].inflictStatus(Unit.PROTECT,7);
+							}
+							
+							if(party[i].hasEquippedPassiveSkill(PassiveSkill.AUTOSHELL))
+							{
+								party[i].inflictStatus(Unit.SHELL,7);
+							}
+						}
+					}
 											
 					playSong("Battle", true);
 				}
 				
-				wildRate++;
+				stepsWithoutBattle++;
 			}
 			
 			System.out.println("coord: " + curX + "," + curY);
@@ -6407,6 +6711,22 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		return false;
 	}
 	
+	public boolean partyHasEquippedPassiveSkill(int passiveID)
+	{
+		for(int i=0; i<3; i++)
+		{
+			if(party[i].id != Character.NONE)
+			{
+				if(party[i].hasEquippedPassiveSkill(passiveID))
+				{
+					return true;
+				}
+			}
+		}
+		
+		return false;
+	}
+	
 	public void actionPerformed(ActionEvent arg0)
 	{
 	
@@ -6446,7 +6766,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		{
 			pressedSpace();
 		}
-		/*else if(evt.getKeyCode() == KeyEvent.VK_ENTER) //TODO: remove
+		/*else if(evt.getKeyCode() == KeyEvent.VK_ENTER) //TODO: remove this and other cheats in "finished" game
 		{
 			if(direction == NORTH) curY--;
 			else if(direction == EAST) curX++;
@@ -7066,8 +7386,15 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					if(monsters.get(i).hp > 0 && monsters.get(i).spd > highestMonsterSpd) highestMonsterSpd = monsters.get(i).spd;
 				}
 				
+				//TODO: shouldn't be able to flee from some fights (like bosses) - give monsters a canFlee property?
+				
 				double dfleeChance = 60.0*((double)currentUnit.spd/highestMonsterSpd);
 				int fleeChance = (int) dfleeChance;
+				
+				if(currentUnit.hasEquippedPassiveSkill(PassiveSkill.MESCARED))
+				{
+					fleeChance = 100; //fleeing always works
+				}
 				
 				if(rand.nextInt(100) < fleeChance)
 				{
@@ -7196,13 +7523,14 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		{
 			afterBattleAlerts = new ArrayList<AfterBattleAlert>();
 			
-			int totalExp = getTotalExpGain();
-			int totalSP = getTotalSPGain();
 			boolean leveledUp;
 			for(int i=0; i<3; i++)
 			{
 				if(party[i].id != Character.NONE)
 				{
+					int totalExp = getTotalExpGain(party[i]);
+					int totalSP = getTotalSPGain(party[i]);
+					
 					leveledUp = false;
 					if(party[i].hp > 0)
 					{
@@ -7264,10 +7592,31 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			{
 				for(int j=0; j<monsters.get(i).itemDrops.size(); j++)
 				{
-					if(rand.nextInt(100) < monsters.get(i).itemRates.get(j))
+					int itemRate = monsters.get(i).itemRates.get(j);
+					
+					if(partyHasEquippedPassiveSkill(PassiveSkill.FOOLSFORTUNE))
+					{
+						itemRate *= 1.5; //TODO: +50%? base this on dex or no?
+					}
+					
+					if(rand.nextInt(100) < itemRate)
 					{
 						addToItemList(monsters.get(i).itemDrops.get(j), itemDrops);
 						addToInventory(monsters.get(i).itemDrops.get(j));
+					}
+				}
+			}
+			
+			/**
+			 * Ignorance Is Bliss
+			 */
+			for(int i=0; i<3; i++)
+			{
+				if(party[i].id != Character.NONE)
+				{
+					if(party[i].hasEquippedPassiveSkill(PassiveSkill.IGNORANCEISBLISS))
+					{
+						party[i].clearAllStatuses(); //remove all statuses at end of battle
 					}
 				}
 			}
@@ -7276,10 +7625,12 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		}
 		else if(state == BATTLEFLED)
 		{
+			playSong("Cowardice");
+			
 			setState(AFTERBATTLE);
 		}
 		else if(state == AFTERBATTLE)
-		{
+		{			
 			setState(MAP);
 			
 			playMapSong(true);
@@ -7375,46 +7726,6 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					switchCharacters(actualIndices.get(i), correctIndices.get(i));
 				}
 			}
-			
-			
-//			for(int i=0; i<2; i++)
-//			{
-//				if(party[i].id == Character.NONE && party[i+1].id != Character.NONE)
-//				{
-//					for(int j=i; j<2; j++)
-//					{
-//						party[j] = party[j+1];
-//					}
-//					
-//					party[2] = new None();
-//				}
-//			}
-//			for(int i=3; i<7; i++)
-//			{				
-//				if(party[i].id == Character.NONE)
-//				{
-//					boolean partyExistsAfter = false;
-//					for(int j=i; j<=7; j++)
-//					{
-//						if(party[j].id != Character.NONE) partyExistsAfter = true; 
-//					}
-//					
-//					if(partyExistsAfter)
-//					{
-//						while(party[i].id == Character.NONE)
-//						{
-//							for(int j=i; j<7; j++)
-//							{
-//								party[j] = party[j+1];
-//							}
-//						}
-//						
-//						party[7] = new None();
-//						
-//						System.out.println(party[3].id + ", " + party[4].id + ", " + party[5].id + ", " + party[6].id + ", " + party[7].id);
-//					}
-//				}
-//			}
 			
 			setState(EDITPARTY);
 			removeIndex();
