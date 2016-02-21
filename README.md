@@ -46,7 +46,7 @@ If you want to run Java through the command prompt, you're on your own because I
 <li>Options menu - stuff like volume/mute, cursor memory settings, button configuration, etc.
 <li>xOffset and yOffset for Shop events, similar to what Inn is doing
 <li>Make critical hits more obvious somehow - write "Critical" above the damage in orange or something
-<li>Handle negative resistances (weaknesses) - so -50% fire resistance would mean it takes 50% more damage. This might already be handled but I'm not sure
+<li>Handle negative resistances (weaknesses) - so -50% fire resistance would mean it takes 50% more damage. This might already be handled but I'm not sure. Also make sure we handle resistances over 100% (absorb damage). Might already be handled as well.
 <li>Some way to handle ghosts being immune to physical damage - how do we determine if something is physical?
 <li>Some sort of "super class" that holds anything we'd want to serialize (characters, inventory, map states, etc.)? Would make saving less terrible but would require a lot of restructuring. Not sure if this would actually work
 <li>Gray out the options in battle if they're not usable (no active skills, no items, etc.)
