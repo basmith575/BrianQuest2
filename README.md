@@ -37,7 +37,6 @@ If you want to run Java through the command prompt, you're on your own because I
 <li>Come up with good items/equipments, other active/passive skills, etc.
 <li>Some way to make animationMap() code in Action.java less bad?
 <li>Make Amp skill do something (should add the Amp status effect which enhances his next non-Amp skill)
-<li>Make all the passive skills work (right now only the stat boosting ones do)
 <li>Test AfterBattleAlert stuff at some point... it's 100% untested
 <li>Save game slots - should have 3 (or more) slots that you save to, not just one save with New Game and Continue. Should also fix/improve the saving/loading logic with new games
 <li>Dark/Holy elements? Would be good for evil things like Waffle House
@@ -47,7 +46,8 @@ If you want to run Java through the command prompt, you're on your own because I
 <li>xOffset and yOffset for Shop events, similar to what Inn is doing
 <li>Make critical hits more obvious somehow - write "Critical" above the damage in orange or something
 <li>Handle negative resistances (weaknesses) - so -50% fire resistance would mean it takes 50% more damage. This might already be handled but I'm not sure. Also make sure we handle resistances over 100% (absorb damage). Might already be handled as well.
-<li>Some way to handle ghosts being immune to physical damage - how do we determine if something is physical?
 <li>Some sort of "super class" that holds anything we'd want to serialize (characters, inventory, map states, etc.)? Would make saving less terrible but would require a lot of restructuring. Not sure if this would actually work
 <li>Gray out the options in battle if they're not usable (no active skills, no items, etc.)
+<li>When drawing HP bars, we sometimes set the bar length to 1 if bar length < 1 (to handle cases when HP is like 1/1000). We should only be doing this if HP is NOT 0. If HP is 0 then bar length should be 0.
+<li>Enemy "types" (beast, human, robot, etc.)
 </ul>
