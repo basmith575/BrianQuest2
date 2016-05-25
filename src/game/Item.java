@@ -2,21 +2,26 @@ package game;
 
 import java.util.ArrayList;
 
-public class Item
+public class Item implements java.io.Serializable
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	/**
 	 * Item types
 	 */
 	public static final int HP = 0;
 	public static final int MP = 1;
-	public static final int REVIVE = 2;
-	public static final int WEAPON = 3;
-	public static final int HAT = 4;
-	public static final int ARMOR = 5;
-	public static final int SHOE = 6;
-	public static final int ACCESSORY = 7;
-	public static final int VALUABLE = 8;
-	public static final int KEYITEM = 9;
+	public static final int STATUSHEAL = 2;
+	public static final int REVIVE = 3;
+	public static final int WEAPON = 4;
+	public static final int HAT = 5;
+	public static final int ARMOR = 6;
+	public static final int SHOE = 7;
+	public static final int ACCESSORY = 8;
+	public static final int VALUABLE = 9;
+	public static final int KEYITEM = 10;
 	
 	/**
 	 * ID of the item
@@ -24,47 +29,68 @@ public class Item
 	public static final int NOITEM = -1;
 	
 	//HP
-	public static final int POTION = 0;
+	public static final int HP_BASE = 0;								//0
+	public static final int POTION = HP_BASE;
 	
 	//MP
-	public static final int ETHER = 100;
+	public static final int MP_BASE = HP_BASE + 100;					//100
+	public static final int ETHER = MP_BASE;
+	
+	//Status Heal
+	public static final int STATUSHEAL_BASE = MP_BASE + 100;			//200
+	public static final int ANTIDOTE = STATUSHEAL_BASE + 1;
+	public static final int HOOKEDONPHONICS = STATUSHEAL_BASE + 2;
+	public static final int EYEDROPS = STATUSHEAL_BASE + 3;
+	public static final int COFFEE = STATUSHEAL_BASE + 4;
+	//TODO: make these exist and work
 	
 	//Revive
-	public static final int MOUNTAINDEW = 200;
+	public static final int REVIVE_BASE = STATUSHEAL_BASE + 100; 		//300
+	public static final int MOUNTAINDEW = REVIVE_BASE;
 	
 	//Weapon - Sword
-	public static final int BADSWORD = 300;
-	public static final int RUSTYSWORD = 301;
+	public static final int SWORD_BASE = REVIVE_BASE + 100;				//400
+	public static final int BADSWORD = SWORD_BASE;
+	public static final int RUSTYSWORD = SWORD_BASE + 1;
+	//TODO: Fruit Knife (use on Veggie boss + other fruit/veggie enemies)
 	
 	//Weapon - Stick
-	public static final int STICK = 400;
-	public static final int STICKOFENLIGHTENMENT = 499;
+	public static final int STICK_BASE = SWORD_BASE + 100;				//500
+	public static final int STICK = STICK_BASE;
+	public static final int STICKOFENLIGHTENMENT = STICK_BASE + 1;
 	
 	//Weapon - Instrument
-	public static final int UKULELE = 500;
+	public static final int INSTRUMENT_BASE = STICK_BASE + 100;			//600
+	public static final int UKULELE = INSTRUMENT_BASE;
 	
 	//Weapon - Other
-	
+	public static final int OTHERWEAPON_BASE = INSTRUMENT_BASE + 100;	//700
 	
 	//Hat
-	public static final int MTNDEWHAT = 700;
-	public static final int BIKEHELMET = 701;
+	public static final int HAT_BASE = OTHERWEAPON_BASE + 100;			//800
+	public static final int MTNDEWHAT = HAT_BASE;
+	public static final int BIKEHELMET = HAT_BASE + 1;
 	
 	//Armor
-	public static final int TORNSHIRT = 800;
-	public static final int PLASTICARMOR = 801;
+	public static final int ARMOR_BASE = HAT_BASE + 100;				//900
+	public static final int TORNSHIRT = ARMOR_BASE;
+	public static final int PLASTICARMOR = ARMOR_BASE + 1;
 	
 	//Shoe
-	public static final int OLDSOCKS = 900;
-	public static final int NICEBOOTS = 901;
+	public static final int SHOE_BASE = ARMOR_BASE + 100;				//1000
+	public static final int OLDSOCKS = SHOE_BASE;
+	public static final int NICEBOOTS = SHOE_BASE + 1;
 	
 	//Accessory
-	public static final int RINGPOP = 1000;
-	public static final int SPICYHOTDORITOS = 1001;
+	public static final int ACCESSORY_BASE = SHOE_BASE + 100;			//1100
+	public static final int RINGPOP = ACCESSORY_BASE;
+	public static final int SPICYHOTDORITOS = ACCESSORY_BASE + 1;
 	
 	//Valuable
+	public static final int VALUABLE_BASE = ACCESSORY_BASE + 100;		//1200
 	
 	//Key Item
+	public static final int KEYITEM_BASE = VALUABLE_BASE + 100;			//1300
 	
 	public int id;
 	public int type;
@@ -162,9 +188,9 @@ public class Item
 	{
 		if(this.type == WEAPON)
 		{
-			return "itemIcon"+this.type+"_"+this.weaponType; 
+			return "iconItem"+this.type+"_"+this.weaponType; 
 		}
-		else return "itemIcon"+this.type; 
+		else return "iconItem"+this.type; 
 	}
 	
 	public static String weaponTypeString(int weaponType)
@@ -191,6 +217,11 @@ public class Item
 
 class NoItem extends Item
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public NoItem()
 	{
 		this.name = "None";
@@ -206,6 +237,11 @@ class NoItem extends Item
 
 class Potion extends Item
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public Potion(int qty)
 	{
 		this.name = "Potion";
@@ -225,6 +261,11 @@ class Potion extends Item
 
 class Ether extends Item
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public Ether(int qty)
 	{
 		this.name = "Ether";
@@ -244,6 +285,11 @@ class Ether extends Item
 
 class MountainDew extends Item
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public MountainDew(int qty)
 	{
 		this.name = "Mountain Dew";
@@ -262,6 +308,11 @@ class MountainDew extends Item
  */
 class BadSword extends Item
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public BadSword(int qty)
 	{
 		this.name = "Bad Sword";
@@ -296,7 +347,7 @@ class BadSword extends Item
 		
 		this.elementResistance = new int[Game.NUMELEMENTS];
 		
-		this.statusResistance = new int[Unit.NUMSTATUS];
+		this.statusResistance = new int[Game.NUMSTATUSES];
 		
 		this.activeSkills = new ArrayList<ActiveSkill>();
 		this.activeSkills.add(new ActiveBrianPunch(0, false));
@@ -309,7 +360,7 @@ class BadSword extends Item
 		switch(characterID)
 		{
 			case Character.BRIAN: return true;
-			case Character.RYAN: return true;
+			case Character.HANK: return true;
 			case Character.MYCHAL: return true;
 			case Character.KITTEN: return true;
 		}
@@ -320,6 +371,11 @@ class BadSword extends Item
 
 class RustySword extends Item
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public RustySword(int qty)
 	{
 		this.name = "Rusty Sword";
@@ -354,7 +410,7 @@ class RustySword extends Item
 		
 		this.elementResistance = new int[Game.NUMELEMENTS];
 		
-		this.statusResistance = new int[Unit.NUMSTATUS];
+		this.statusResistance = new int[Game.NUMSTATUSES];
 		
 		this.activeSkills = new ArrayList<ActiveSkill>();
 		this.activeSkills.add(new ActiveFire(0, false));
@@ -369,7 +425,7 @@ class RustySword extends Item
 		switch(characterID)
 		{
 			case Character.BRIAN: return true;
-			case Character.RYAN: return true;
+			case Character.HANK: return true;
 			case Character.MYCHAL: return true;
 			case Character.KITTEN: return true;
 		}
@@ -380,6 +436,11 @@ class RustySword extends Item
 
 class Stick extends Item
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public Stick(int qty)
 	{
 		this.name = "Stick";
@@ -414,7 +475,7 @@ class Stick extends Item
 		
 		this.elementResistance = new int[Game.NUMELEMENTS];
 		
-		this.statusResistance = new int[Unit.NUMSTATUS];
+		this.statusResistance = new int[Game.NUMSTATUSES];
 		
 		this.activeSkills = new ArrayList<ActiveSkill>();
 		this.activeSkills.add(new ActiveBarf(0, false));
@@ -436,6 +497,11 @@ class Stick extends Item
 
 class StickOfEnlightenment extends Item
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public StickOfEnlightenment(int qty)
 	{
 		this.name = "Stick Of Enlightenment";
@@ -470,7 +536,7 @@ class StickOfEnlightenment extends Item
 		
 		this.elementResistance = new int[Game.NUMELEMENTS];
 		
-		this.statusResistance = new int[Unit.NUMSTATUS];
+		this.statusResistance = new int[Game.NUMSTATUSES];
 		
 		this.activeSkills = new ArrayList<ActiveSkill>();
 		this.activeSkills.add(new ActiveSummonTrains(0, false));
@@ -492,6 +558,11 @@ class StickOfEnlightenment extends Item
 
 class Ukulele extends Item
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public Ukulele(int qty)
 	{
 		this.name = "Ukulele";
@@ -503,7 +574,7 @@ class Ukulele extends Item
 		this.usable = false;
 		this.qty = qty;
 		
-		this.imageName = "Ukeleke";
+		this.imageName = "Ukulele";
 		this.attackAnimation = Game.HIT;
 		
 		this.price = 300;
@@ -526,7 +597,7 @@ class Ukulele extends Item
 		
 		this.elementResistance = new int[Game.NUMELEMENTS];
 		
-		this.statusResistance = new int[Unit.NUMSTATUS];
+		this.statusResistance = new int[Game.NUMSTATUSES];
 		
 		this.activeSkills = new ArrayList<ActiveSkill>();
 		this.activeSkills.add(new ActiveBlessingOfMiku(0, false));
@@ -539,7 +610,7 @@ class Ukulele extends Item
 	{
 		switch(characterID)
 		{
-			case Character.RYAN: return true;
+			case Character.HANK: return true;
 		}
 		
 		return false;
@@ -551,6 +622,11 @@ class Ukulele extends Item
  */
 class MtnDewHat extends Item
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public MtnDewHat(int qty)
 	{
 		this.name = "Mtn Dew Hat";
@@ -578,9 +654,9 @@ class MtnDewHat extends Item
 		this.critRateMod = 0;
 		
 		this.elementResistance = new int[Game.NUMELEMENTS];
-		this.elementResistance[Game.WATER] = 20;
+		this.elementResistance[Game.ELEMENT_WATER] = 20;
 		
-		this.statusResistance = new int[Unit.NUMSTATUS];
+		this.statusResistance = new int[Game.NUMSTATUSES];
 		
 		this.activeSkills = new ArrayList<ActiveSkill>();
 		this.activeSkills.add(new ActiveMtnDewWave(0, false));
@@ -597,6 +673,11 @@ class MtnDewHat extends Item
 
 class BikeHelmet extends Item
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public BikeHelmet(int qty)
 	{
 		this.name = "Bike Helmet";
@@ -625,7 +706,7 @@ class BikeHelmet extends Item
 		
 		this.elementResistance = new int[Game.NUMELEMENTS];
 		
-		this.statusResistance = new int[Unit.NUMSTATUS];
+		this.statusResistance = new int[Game.NUMSTATUSES];
 		
 		this.activeSkills = new ArrayList<ActiveSkill>();
 		this.activeSkills.add(new ActiveVomitEruption(0, false));
@@ -650,6 +731,11 @@ class BikeHelmet extends Item
  */
 class TornShirt extends Item
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public TornShirt(int qty)
 	{
 		this.name = "Torn Shirt";
@@ -678,7 +764,7 @@ class TornShirt extends Item
 		
 		this.elementResistance = new int[Game.NUMELEMENTS];
 		
-		this.statusResistance = new int[Unit.NUMSTATUS];
+		this.statusResistance = new int[Game.NUMSTATUSES];
 		
 		this.activeSkills = new ArrayList<ActiveSkill>();
 		
@@ -694,6 +780,11 @@ class TornShirt extends Item
 
 class PlasticArmor extends Item
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public PlasticArmor(int qty)
 	{
 		this.name = "Plastic Armor";
@@ -722,7 +813,7 @@ class PlasticArmor extends Item
 		
 		this.elementResistance = new int[Game.NUMELEMENTS];
 		
-		this.statusResistance = new int[Unit.NUMSTATUS];
+		this.statusResistance = new int[Game.NUMSTATUSES];
 		
 		this.activeSkills = new ArrayList<ActiveSkill>();
 		
@@ -745,6 +836,11 @@ class PlasticArmor extends Item
  */
 class OldSocks extends Item
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public OldSocks(int qty)
 	{
 		this.name = "Old Socks";
@@ -772,9 +868,9 @@ class OldSocks extends Item
 		this.critRateMod = 0;
 		
 		this.elementResistance = new int[Game.NUMELEMENTS];
-		this.elementResistance[Game.FIRE] = 10;
+		this.elementResistance[Game.ELEMENT_FIRE] = 10;
 		
-		this.statusResistance = new int[Unit.NUMSTATUS];
+		this.statusResistance = new int[Game.NUMSTATUSES];
 		
 		this.activeSkills = new ArrayList<ActiveSkill>();
 		this.passiveSkills = new ArrayList<PassiveSkill>();
@@ -788,6 +884,11 @@ class OldSocks extends Item
 
 class NiceBoots extends Item
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public NiceBoots(int qty)
 	{
 		this.name = "Nice Boots";
@@ -816,7 +917,7 @@ class NiceBoots extends Item
 		
 		this.elementResistance = new int[Game.NUMELEMENTS];
 		
-		this.statusResistance = new int[Unit.NUMSTATUS];
+		this.statusResistance = new int[Game.NUMSTATUSES];
 		
 		this.activeSkills = new ArrayList<ActiveSkill>();
 		this.activeSkills.add(new ActiveBlueShield(0, false));
@@ -836,6 +937,11 @@ class NiceBoots extends Item
  */
 class RingPop extends Item
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public RingPop(int qty)
 	{
 		this.name = "Ring Pop";
@@ -863,7 +969,7 @@ class RingPop extends Item
 		this.critRateMod = 0;
 		
 		this.elementResistance = new int[Game.NUMELEMENTS];
-		this.statusResistance = new int[Unit.NUMSTATUS];
+		this.statusResistance = new int[Game.NUMSTATUSES];
 		
 		this.activeSkills = new ArrayList<ActiveSkill>();
 		this.passiveSkills = new ArrayList<PassiveSkill>();
@@ -877,6 +983,11 @@ class RingPop extends Item
 
 class SpicyHotDoritos extends Item
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public SpicyHotDoritos(int qty)
 	{
 		this.name = "Spicy Hot Doritos";
@@ -904,7 +1015,7 @@ class SpicyHotDoritos extends Item
 		this.critRateMod = 5;
 		
 		this.elementResistance = new int[Game.NUMELEMENTS];
-		this.statusResistance = new int[Unit.NUMSTATUS];
+		this.statusResistance = new int[Game.NUMSTATUSES];
 		
 		this.activeSkills = new ArrayList<ActiveSkill>();
 		this.activeSkills.add(new ActiveFire(0, false));

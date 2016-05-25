@@ -4,8 +4,12 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.*;
 
-public class Unit
+public class Unit implements java.io.Serializable
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	public int id;
 	public String name;
 	public String className;
@@ -50,22 +54,6 @@ public class Unit
 	public ArrayList<PassiveSkill> passiveSkills;
 	
 	public int[] status;
-	public static final int NUMSTATUS = 15;
-	public static final int POISON = 0;
-	public static final int SILENCE = 1;
-	public static final int BLIND = 2;
-	public static final int SLEEP = 3;
-	public static final int PROTECT = 4;
-	public static final int SHELL = 5;
-	public static final int HASTE = 6;
-	public static final int SLOW = 7;
-	public static final int REGEN = 8;
-	public static final int BERSERK = 9;
-	public static final int DEFEND = 10;
-	public static final int ATKUP = 11;
-	public static final int EVADE = 12;
-	public static final int SHAME = 13;
-	public static final int AMP = 14;
 	
 	public int[] elementResistance;
 	public int[] statusResistance;
@@ -76,19 +64,22 @@ public class Unit
 	public int imageHeight; //used for drawing
 	public int spriteHeight; //might have white space offset in image
 	
+	public ArrayList<Integer> actionHistory;
+	
 	/**
 	 * Monster specific
 	 */
-	public String species;
+	public String species;	//display name
+	public int type; 		//monster type (beast, human, etc.)
 	public int expGain;		//how much exp it gives
-	public double spGain; //how many cubes it gives (rounds up to nearest int)
+	public double spGain; 	//how many cubes it gives (rounds up to nearest int)
 	public int moneyGain;	//how much money it gives
 	public ArrayList<Item> itemDrops;
 	public ArrayList<Integer> itemRates;
 	public ArrayList<Item> stealItems;
 	public ArrayList<Integer> stealItemRates;
 	public String attackAnimation;
-	public boolean murderable; //does Murder work on it?
+	public boolean preventFlee; //for bosses and stuff, prevent fleeing
 	
 	public Unit()
 	{
@@ -121,18 +112,44 @@ public class Unit
 		
 		this.ct = unit.ct;
 		
-		this.status = new int[NUMSTATUS];
-		for(int i=0; i<this.status.length; i++) this.status[i] = unit.status[i];
+		this.status = new int[Game.NUMSTATUSES];
+		for(int i=0; i<this.status.length; i++)
+		{
+			if(i >= unit.status.length) //TODO: can remove this check once I know more statuses won't be added
+			{
+				this.status[i] = 0;
+			}
+			else this.status[i] = unit.status[i];
+		}
 		
 		this.elementResistance = new int[Game.NUMELEMENTS];
-		for(int i=0; i<this.elementResistance.length; i++) this.elementResistance[i] = unit.elementResistance[i];
+		for(int i=0; i<this.elementResistance.length; i++)
+		{
+			this.elementResistance[i] = unit.elementResistance[i];
+		}
 		
-		this.statusResistance = new int[NUMSTATUS];
-		for(int i=0; i<this.statusResistance.length; i++) this.statusResistance[i] = unit.statusResistance[i];
+		this.statusResistance = new int[Game.NUMSTATUSES];
+		for(int i=0; i<this.statusResistance.length; i++)
+		{
+			if(i >= unit.statusResistance.length) //TODO: can remove this check once I know more statuses won't be added
+			{
+				this.statusResistance[i] = 0;
+			}
+			else this.statusResistance[i] = unit.statusResistance[i];
+		}
 		
 		this.imageHeight = unit.imageHeight;
 		this.imageWidth = unit.imageWidth;
 		this.spriteHeight = unit.spriteHeight;
+		
+		this.actionHistory = new ArrayList<Integer>();
+		if(unit.actionHistory != null)
+		{
+			for(int i=0; i<unit.actionHistory.size(); i++)
+			{
+				this.actionHistory.add(unit.actionHistory.get(i));
+			}
+		}
 		
 		//Character specific
 		if(unit.unitType == Unit.CHARACTER)
@@ -175,7 +192,8 @@ public class Unit
 			
 			this.attackAnimation = unit.attackAnimation;
 			
-			this.murderable = unit.murderable;
+			this.preventFlee = unit.preventFlee;
+			this.type = unit.type;
 		}
 	}
 	
@@ -183,9 +201,10 @@ public class Unit
 	{
 		if(character instanceof Brian) return new Brian((Brian) character);
 		else if(character instanceof Alex) return new Alex((Alex) character);
-		else if(character instanceof Ryan) return new Ryan((Ryan) character);
+		else if(character instanceof Hank) return new Hank((Hank) character);
 		else if(character instanceof Mychal) return new Mychal((Mychal) character);
 		else if(character instanceof Kitten) return new Kitten((Kitten) character);
+		else if(character instanceof KevBot) return new KevBot((KevBot) character);
 		
 		return null;
 	}
@@ -217,11 +236,49 @@ public class Unit
 		}
 	}
 	
+	public int getLastAction()
+	{
+		return getLastAction(1);
+	}
+	
+	public int getLastAction(int numActionsAgo)
+	{
+		if(this.actionHistory == null)
+		{
+			return -1;
+		}
+		else if(this.actionHistory.size() < numActionsAgo)
+		{
+			return -1;
+		}
+		else
+		{
+			return actionHistory.get(actionHistory.size()-numActionsAgo);
+		}
+	}
+	
+	public boolean usedActionInPreviousTurns(int action, int turns)
+	{
+		if(this.actionHistory == null)
+		{
+			return false;
+		}
+		
+		int start = Math.max(0, this.actionHistory.size() - turns);
+		
+		for(int i=start; i<this.actionHistory.size(); i++)
+		{
+			if(this.actionHistory.get(i) == action) return true;
+		}
+		
+		return false;
+	}
+	
 	public void initialize()
 	{
 		//things that get initialized the same for every character
 		
-		this.status = new int[NUMSTATUS];
+		this.status = new int[Game.NUMSTATUSES];
 		for(int i=0; i<this.status.length; i++)
 		{
 			this.status[i] = 0;
@@ -233,11 +290,13 @@ public class Unit
 			this.elementResistance[i] = 0;
 		}
 		
-		this.statusResistance = new int[NUMSTATUS];
+		this.statusResistance = new int[Game.NUMSTATUSES];
 		for(int i=0; i<this.statusResistance.length; i++)
 		{
 			this.statusResistance[i] = 0;
 		}
+		
+		this.actionHistory = new ArrayList<Integer>();
 		
 		if(this.unitType == CHARACTER)
 		{
@@ -261,6 +320,18 @@ public class Unit
 			this.mdef = 0;
 			
 			this.cubes = this.getTotalCubes();
+		}
+		else if(this.unitType == MONSTER)
+		{
+			if(this.itemDrops.size() != this.itemRates.size())
+			{
+				System.out.println("itemDrops.size() != itemRates.size() for " + this.species + "!");
+			}
+			
+			if(this.stealItems.size() != this.stealItemRates.size())
+			{
+				System.out.println("stealItems.size() != stealItemRates.size() for " + this.species + "!");
+			}
 		}
 		
 		this.ct = this.getBaseCT();
@@ -317,22 +388,22 @@ public class Unit
 	{
 		int hitRate = attack.hitRate - target.evasion + hitBonus;
 		
-		if(attack.status[Unit.BLIND] == 1)
+		if(attack.status[Game.STATUS_BLIND] == 1)
 		{
 			hitRate -= 50;
 		}
-		if(attack.status[Unit.BERSERK] == 1)
+		if(attack.status[Game.STATUS_BERSERK] == 1)
 		{
 			hitRate -= 15;
 		}
-		if(target.status[Unit.EVADE] == 1)
+		if(target.status[Game.STATUS_EVADE] == 1)
 		{
 			hitRate -= 50;
 		}
 		if(hitRate < 5) hitRate = 5; //5% is the minimum
 		
-		if(attack.status[Unit.BLIND] == 1 && hitRate > 80) hitRate = 80;
-		if(attack.status[Unit.BERSERK] == 1 && hitRate > 90) hitRate = 90;
+		if(attack.status[Game.STATUS_BLIND] == 1 && hitRate > 80) hitRate = 80;
+		if(attack.status[Game.STATUS_BERSERK] == 1 && hitRate > 90) hitRate = 90;
 		
 		return hitRate;
 	}
@@ -376,10 +447,17 @@ public class Unit
 	{
 		if(this.status[status] != 0) return 0; //already have the status
 		
-		if(status == PROTECT || status == SHELL || status == HASTE || status == REGEN || status == DEFEND || status == ATKUP || status == EVADE)
+		if(status == Game.STATUS_PROTECT || status == Game.STATUS_SHELL || status == Game.STATUS_HASTE || status == Game.STATUS_REGEN || status == Game.STATUS_DEFEND
+				|| status == Game.STATUS_ATKUP || status == Game.STATUS_EVADE || status == Game.STATUS_GOALKEEPER)
 		{
-			if(this.status[SHAME] == 1) return 0; //don't allow buffs
-			else return 100; //don't care about dex or resistance		
+			if(this.status[Game.STATUS_SHAME] == 1)
+			{
+				return 0; //don't allow buffs
+			}
+			else
+			{
+				return 100; //don't care about dex or resistance		
+			}
 		}
 		
 		rate += 2*user.dex - this.level;
@@ -399,14 +477,22 @@ public class Unit
 		{
 			this.atk = 0; //use the weapon's Atk as the base
 		}
+		
 		this.def = 0;
 		this.mdef = 0;
 		this.hitRate = 100 + this.dex;
 		this.evasion = this.spd;
 		this.critRate = this.dex/5;
 		
-		for(int i=0; i<this.elementResistance.length; i++) this.elementResistance[i] = 0;
-		for(int i=0; i<this.statusResistance.length; i++) this.statusResistance[i] = 0;
+		for(int i=0; i<this.elementResistance.length; i++)
+		{
+			this.elementResistance[i] = 0;
+		}
+		
+		for(int i=0; i<this.statusResistance.length; i++)
+		{
+			this.statusResistance[i] = 0;
+		}
 	}
 	
 	public void recalculateStats()
@@ -596,15 +682,19 @@ public class Unit
 		}
 	}
 	
-	public boolean canUseSkill(Action skill)
+	public boolean canUseAction(Action action)
 	{
-		if(this.status[SILENCE] > 0) return false;
+		if(this.status[Game.STATUS_SILENCE] > 0) return false;
 		
-		if(this.mp < skill.mp) return false;
+		if(this.mp < action.mp) return false;
 		
-		if(this.id == Character.RYAN && this.equip[WEAPON].weaponType != Item.INSTRUMENTTYPE)
+		if(this.id == Character.HANK && this.equip[WEAPON].weaponType != Item.INSTRUMENTTYPE)
 		{
-			return false; //Ryan has to have an instrument equipped to use skills
+			//Hank requires an instrument unless he's using these skills
+			if(action.id != Action.BAJABLAST || action.id == Action.BLUESHIELD || action.id == Action.BLUEBARRIER || action.id == Action.SILLYDANCE)
+			{
+				return false;
+			}
 		}
 		
 		return true;
@@ -680,9 +770,10 @@ public class Unit
 		{
 		case Character.BRIAN: return "Skill";
 		case Character.ALEX: return "Folly";
-		case Character.RYAN: return "Music";
+		case Character.HANK: return "Music";
 		case Character.MYCHAL: return "Sword Art";
 		case Character.KITTEN: return "Feline";
+		case Character.KEVBOT: return "Robotics";
 		}
 		
 		return "???";
@@ -716,42 +807,44 @@ public class Unit
 	{
 		this.status[status] = numberOfTurns;
 		
-		if(status == HASTE)
+		if(status == Game.STATUS_HASTE)
 		{
-			this.status[SLOW] = 0;
+			this.status[Game.STATUS_SLOW] = 0;
 			
 			if(this.ct > this.getBaseCT()) this.ct = (this.ct + this.getBaseCT())/2; //give a CT boost
 		}
-		else if(status == SLOW)
+		else if(status == Game.STATUS_SLOW)
 		{
-			this.status[HASTE] = 0;
+			this.status[Game.STATUS_HASTE] = 0;
 			
 			this.ct = (this.ct + this.getBaseCT())/2; //give a CT un-boost
 		}
-		else if(status == SHAME)
+		else if(status == Game.STATUS_SHAME)
 		{
-			this.status[PROTECT] = 0;
-			this.status[SHELL] = 0;
-			this.status[HASTE] = 0;
-			this.status[REGEN] = 0;
-			this.status[DEFEND] = 0;
-			this.status[ATKUP] = 0;
-			this.status[EVADE] = 0;
+			this.status[Game.STATUS_PROTECT] = 0;
+			this.status[Game.STATUS_SHELL] = 0;
+			this.status[Game.STATUS_HASTE] = 0;
+			this.status[Game.STATUS_REGEN] = 0;
+			this.status[Game.STATUS_DEFEND] = 0;
+			this.status[Game.STATUS_ATKUP] = 0;
+			this.status[Game.STATUS_EVADE] = 0;
+			this.status[Game.STATUS_GOALKEEPER] = 0;
 		}
 	}
 	
 	public void decrementStatuses()
 	{
 		//decrement statuses that wear off in battle
-		if(this.status[Unit.PROTECT] > 0) this.status[Unit.PROTECT]--;
-		if(this.status[Unit.SHELL] > 0) this.status[Unit.SHELL]--;
-		if(this.status[Unit.SLOW] > 0) this.status[Unit.SLOW]--;
-		if(this.status[Unit.HASTE] > 0) this.status[Unit.HASTE]--;
-		if(this.status[Unit.REGEN] > 0) this.status[Unit.REGEN]--;
-		if(this.status[Unit.BERSERK] > 0) this.status[Unit.BERSERK]--;
-		if(this.status[Unit.DEFEND] > 0) this.status[Unit.DEFEND]--;
-		if(this.status[Unit.ATKUP] > 0) this.status[Unit.ATKUP]--;
-		if(this.status[Unit.EVADE] > 0) this.status[Unit.EVADE]--;
+		int[] statusesToDecrement = { Game.STATUS_PROTECT, Game.STATUS_SHELL, Game.STATUS_HASTE, Game.STATUS_SLOW, Game.STATUS_REGEN, Game.STATUS_BERSERK, Game.STATUS_DEFEND,
+				Game.STATUS_ATKUP, Game.STATUS_EVADE, Game.STATUS_ATKDOWN, Game.STATUS_GOALKEEPER };
+		
+		for(int i=0; i<statusesToDecrement.length; i++)
+		{
+			if(this.status[statusesToDecrement[i]] > 0)
+			{
+				this.status[statusesToDecrement[i]]--;
+			}
+		}
 	}
 	
 	public boolean existsAndAlive()
@@ -804,15 +897,15 @@ public class Unit
 	{
 		//Flag set to 2 means we should trigger that effect, only want to trigger once
 		
-		if(this.status[POISON] == 1)
+		if(this.status[Game.STATUS_POISON] == 1)
 		{
-			this.status[POISON] = -1;
+			this.status[Game.STATUS_POISON] = -1;
 			return true;
 		}
 		
-		if(this.status[REGEN] > 0 && this.hp < this.maxHp)
+		if(this.status[Game.STATUS_REGEN] > 0 && this.hp < this.maxHp)
 		{
-			this.status[REGEN] = this.status[REGEN] * -1;
+			this.status[Game.STATUS_REGEN] = this.status[Game.STATUS_REGEN] * -1;
 			return true;
 		}
 		
@@ -823,31 +916,28 @@ public class Unit
 	{
 		//Clear the flags
 		
-		if(this.status[POISON] == -1)
+		if(this.status[Game.STATUS_POISON] == -1)
 		{
-			this.status[POISON] = 1;
+			this.status[Game.STATUS_POISON] = 1;
 		}
 		
-		if(this.status[REGEN] < 0)
+		if(this.status[Game.STATUS_REGEN] < 0)
 		{
-			this.status[REGEN] = this.status[REGEN] * -1;
+			this.status[Game.STATUS_REGEN] = this.status[Game.STATUS_REGEN] * -1;
 		}
 	}
 	
 	public void clearTempStatuses()
 	{
 		//these statuses should go away when a battle ends
-		this.status[PROTECT] = 0;
-		this.status[SHELL] = 0;
-		this.status[HASTE] = 0;
-		this.status[SLOW] = 0;
-		this.status[REGEN] = 0;
-		this.status[BERSERK] = 0;
-		this.status[DEFEND] = 0;
-		this.status[ATKUP] = 0;
-		this.status[EVADE] = 0;
-		this.status[SHAME] = 0;
-		this.status[AMP] = 0;
+		
+		int[] tempStatuses = { Game.STATUS_PROTECT, Game.STATUS_SHELL, Game.STATUS_HASTE, Game.STATUS_SLOW, Game.STATUS_REGEN, Game.STATUS_BERSERK, Game.STATUS_DEFEND,
+				Game.STATUS_ATKUP, Game.STATUS_EVADE, Game.STATUS_SHAME, Game.STATUS_AMP, Game.STATUS_ATKDOWN, Game.STATUS_GOALKEEPER };
+		
+		for(int i=0; i<tempStatuses.length; i++)
+		{
+			this.status[tempStatuses[i]] = 0;
+		}
 	}
 	
 	public void clearAllStatuses()
@@ -864,8 +954,8 @@ public class Unit
 		
 		int ct = 250 / (this.spd + 3) - this.spd/7;
 		
-		if(this.status[HASTE] == 1) ct /= 2;
-		else if(this.status[SLOW] == 1) ct *= 2;
+		if(this.status[Game.STATUS_HASTE] == 1) ct /= 2;
+		else if(this.status[Game.STATUS_SLOW] == 1) ct *= 2;
 		
 		if(ct < 3) ct = 3;
 		
@@ -878,22 +968,33 @@ public class Unit
 		{
 			case Character.BRIAN: return new Brian(level, index);
 			case Character.ALEX: return new Alex(level, index);
-			case Character.RYAN: return new Ryan(level, index);
+			case Character.HANK: return new Hank(level, index);
 			case Character.MYCHAL: return new Mychal(level, index);
 			case Character.KITTEN: return new Kitten(level, index);
+			case Character.KEVBOT: return new KevBot(level, index);
 		}
 		
 		return new None(index);
 	}
 	
-	public static Unit monsterFromID(int id, int level)
+	public int getDef()
 	{
-		switch(id)
+		if(this.status[Game.STATUS_VIRUS] > 0)
 		{
-			case Monster.SNAKE: return new Snake();
+			return this.def/3; //TODO: might need to rework this (same with mdef)
 		}
 		
-		return new None(0);
+		return this.def;
+	}
+	
+	public int getMdef()
+	{
+		if(this.status[Game.STATUS_VIRUS] > 0)
+		{
+			return this.mdef/3;
+		}
+		
+		return this.mdef;
 	}
 	
 	public int getDmgLowerBound()
@@ -901,6 +1002,13 @@ public class Unit
 		double lowerBound = 75 + 2.5*Math.sqrt(this.dex);
 		
 		return Math.min((int) lowerBound, 95);
+	}
+	
+	public void resetBeforeBattle()
+	{		
+		this.resetCT();
+		
+		this.actionHistory = new ArrayList<Integer>();
 	}
 	
 	public void resetCT()

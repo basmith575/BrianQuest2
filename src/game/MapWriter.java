@@ -3,6 +3,8 @@ package game;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
 
 import javax.imageio.ImageIO;
 
@@ -20,7 +22,7 @@ public class MapWriter {
 	public static void main(String[] args)
 	{		
 		int[] states = new int[100];
-		map = new TestTown(states);
+		map = new ForestOfDisillusionment(states);
 		createImage(false);
 	}
 	
@@ -41,42 +43,58 @@ public class MapWriter {
 		File eventFile = null;
 		BufferedImage eventImage = null;
 		
-		File[][] tileFiles = new File[width][height];
+		BufferedImage[] tileImages = new BufferedImage[Tile.NUMTILES];
+		BufferedImage[] thingImages = new BufferedImage[Thing.NUMTHINGS];
 		
-        for (int i=0; i <width; i++)
-        {
-        	for(int j=0; j <height; j++)
-        	{
-        		try
-        		{
-        			//NOTE: I don't feel like improving this, so for now it will only work for me
-        			tileFiles[i][j] = new File("C:\\Users\\Brian\\workspace\\BrianQuest2\\src\\game\\img\\tile\\tile" + map.tile[i][j].type + ".PNG");
-        		}
-        		catch(Exception e)
-        		{
-        			System.out.println(e.getMessage());
-        		}
-        	}  
-        }  
+		ArrayList<Integer> movingTileList = Tile.movingTileList();
+		ArrayList<Integer> movingThingList = Thing.movingThingList();
+		
+		for(int tileType=0; tileType<tileImages.length; tileType++)
+		{
+			File tileFile;
+			if(!movingTileList.contains(tileType))
+			{
+				tileFile = new File("C:\\Users\\Brian\\workspace\\BrianQuest2\\src\\game\\img\\tile\\tile" + tileType + ".PNG");
+			}
+			else
+			{
+				tileFile = new File("C:\\Users\\Brian\\workspace\\BrianQuest2\\src\\game\\img\\tile\\tile" + tileType + "_0.PNG");
+			}
+			
+			try
+			{
+				tileImages[tileType] = ImageIO.read(tileFile);
+			}
+			catch (IOException e)
+			{
+				e.printStackTrace();
+			}
+		}
+		
+		for(int thingType=0; thingType<thingImages.length; thingType++)
+		{
+			File thingFile;
+			if(!movingThingList.contains(thingType))
+			{
+				thingFile = new File("C:\\Users\\Brian\\workspace\\BrianQuest2\\src\\game\\img\\thing\\thing" + thingType + ".PNG");
+			}
+			else
+			{
+				thingFile = new File("C:\\Users\\Brian\\workspace\\BrianQuest2\\src\\game\\img\\thing\\thing" + thingType + "_0.PNG");
+			}
+			
+			try
+			{
+				thingImages[thingType] = ImageIO.read(thingFile);
+			}
+			catch (IOException e)
+			{
+				System.out.println("Error reading image for thing " + Thing.getThingName(thingType));
+				e.printStackTrace();
+			}
+		}
         
-        BufferedImage[][] buffTileImages = new BufferedImage[width][height];
-        
-        for(int i=0; i<width; i++)
-        {
-        	for(int j=0; j<height; j++)
-        	{
-        		try
-        		{
-        			buffTileImages[i][j] = ImageIO.read(tileFiles[i][j]);
-        		}
-        		catch(Exception e)
-        		{
-        			System.out.println("I am Error");
-        		}
-        	}
-        }
-        
-        int type = buffTileImages[0][0].getType(); 
+        int type = tileImages[0].getType();
         
         BufferedImage finalImg = new BufferedImage(25*width, 25*height, type); 
         
@@ -84,12 +102,15 @@ public class MapWriter {
         {
         	for(int j=0; j<height; j++)
         	{
-        		finalImg.createGraphics().drawImage(buffTileImages[i][j], 25*i, 25*j, 25, 25, null);
+        		finalImg.createGraphics().drawImage(tileImages[map.tile[i][j].type], 25*i, 25*j, 25, 25, null);
         		
         		if(showWalkable)
         		{
         			finalImg.createGraphics().setColor(Color.YELLOW);
-            		if(map.tile[i][j].walkable) finalImg.createGraphics().drawRect(25*i+10,25*j+10,5,5);
+            		if(map.tile[i][j].walkable)
+            		{
+            			finalImg.createGraphics().drawRect(25*i+10,25*j+10,5,5);
+            		}
         		}
         	}
         }
@@ -98,9 +119,20 @@ public class MapWriter {
         {
         	for(int j=0; j<height; j++)
         	{
+        		if(map.tile[i][j].thing.type != Thing.NOTHING)
+        		{        			
+        			finalImg.createGraphics().drawImage(thingImages[map.tile[i][j].thing.type],25*i,25*j,25*Math.max(map.tile[i][j].thing.width,1),25*Math.max(map.tile[i][j].thing.height,1),null);
+        		}
+        		
         		int eventType = map.tile[i][j].event.type;
         		
-        		if(eventType != Event.PORTAL && eventType != Event.NOEVENT)
+        		boolean drawEvent = true;
+        		if(eventType == Event.PORTAL || eventType == Event.NOEVENT || (eventType == Event.NPC && map.tile[i][j].event.name.equals("")))
+        		{
+        			drawEvent = false;
+        		}
+        		
+        		if(drawEvent)
         		{
         			if(eventType == Event.CHEST)
         			{
@@ -137,20 +169,6 @@ public class MapWriter {
         			}
         			
         			finalImg.createGraphics().drawImage(eventImage,25*i,25*j,25,25,null);
-        		}
-        		else if(map.tile[i][j].thing.type != Thing.NOTHING)
-        		{
-        			eventFile = new File("C:\\Users\\Brian\\workspace\\BrianQuest2\\src\\game\\img\\thing\\mapThing" + map.tile[i][j].thing.type + ".PNG");
-        			try
-        			{
-        				eventImage = ImageIO.read(eventFile);
-        			}
-        			catch(Exception e)
-        			{
-        				System.out.println("I am thing Error... map # " + index + " (" + i + "," + j + ")");
-        			}
-        			
-        			finalImg.createGraphics().drawImage(eventImage,25*i,25*j,25*Math.max(map.tile[i][j].thing.width,1),25*Math.max(map.tile[i][j].thing.height,1),null);
         		}
         	}
         }

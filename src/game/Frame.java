@@ -16,7 +16,7 @@ public class Frame
 		frame.setResizable(false);
 		frame.setVisible(true);
 		frame.setLocationRelativeTo(null);
-		ImageIcon i = new ImageIcon(getClass().getResource("img/icon.PNG"));
+		ImageIcon i = new ImageIcon(getClass().getResource("img/icon/icon.PNG"));
 		frame.setIconImage(i.getImage());
 	}
 	

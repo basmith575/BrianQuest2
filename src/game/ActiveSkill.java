@@ -1,7 +1,11 @@
 package game;
 
-public class ActiveSkill
+public class ActiveSkill implements java.io.Serializable
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	//ID
 	public int id;
 	public int currentSP;
@@ -28,6 +32,7 @@ public class ActiveSkill
 			case Action.GOTTAGOFASTER: return new ActiveGottaGoFaster(currentSP, learned);
 			case Action.MURDER: return new ActiveMurder(currentSP, learned);
 			case Action.MASSMURDER: return new ActiveMassMurder(currentSP, learned);
+			//TODO: holy element skill
 			
 			//Alex
 			case Action.BARF: return new ActiveBarf(currentSP, learned);
@@ -40,7 +45,7 @@ public class ActiveSkill
 			case Action.VOMITERUPTION: return new ActiveVomitEruption(currentSP, learned);
 			case Action.SUMMONTRAINS: return new ActiveSummonTrains(currentSP, learned);
 			
-			//Ryan
+			//Hank
 			case Action.BLESSINGOFARINO: return new ActiveBlessingOfArino(currentSP, learned);
 			case Action.BLESSINGOFMIKU: return new ActiveBlessingOfMiku(currentSP, learned);
 			case Action.MYSTERIOUSMELODY: return new ActiveMysteriousMelody(currentSP, learned);
@@ -51,6 +56,8 @@ public class ActiveSkill
 			case Action.AMP: return new ActiveAmp(currentSP, learned);
 			case Action.RADICALRIFF: return new ActiveRadicalRiff(currentSP, learned);
 			case Action.CHIPTUNEOFLIFE: return new ActiveChiptuneOfLife(currentSP, learned);
+			case Action.SOOTHINGSONG: return new ActiveSoothingSong(currentSP, learned); //Esuna
+			//TODO: skill that lowers enemy's defenses
 			
 			//Michael
 			case Action.SHURIKEN: return new ActiveShuriken(currentSP, learned);
@@ -67,14 +74,27 @@ public class ActiveSkill
 			case Action.FIRE: return new ActiveFire(currentSP, learned);
 			case Action.BIGFIRE: return new ActiveBigFire(currentSP, learned);
 			case Action.LIGHTNINGBOLT: return new ActiveLightningBolt(currentSP, learned);
-			case Action.LIGHTNINGSTORM: return new ActiveLightningStorm(currentSP, learned);
+			case Action.LIGHTNINGSTORM: return new ActiveLightningStorm(currentSP, learned); //TODO: remove from Kitten since KevBot has Discharge/Overload?
 			case Action.EARTHSPIKE: return new ActiveEarthSpike(currentSP, learned);
 			case Action.EARTHQUAKE: return new ActiveEarthquake(currentSP, learned);
 			case Action.STEAL: return new ActiveSteal(currentSP, learned);
 			case Action.PURR: return new ActivePurr(currentSP, learned);
-			case Action.CATNAP: return new ActiveCatNap(currentSP, learned);
+			case Action.CATNAP: return new ActiveCatNap(currentSP, learned); //give to Hank instead as Lullaby?
 			case Action.CATSCRATCH: return new ActiveCatScratch(currentSP, learned);
 			case Action.DEVOUR: return new ActiveDevour(currentSP, learned);
+			//TODO: dark "ultima"-like skill
+			
+			//Kev-Bot
+			case Action.DISCHARGE: return new ActiveDischarge(currentSP, learned); //lightning to all (plus also slightly damages party)
+			case Action.ROBOTTEARS: return new ActiveRobotTears(currentSP, learned); //atk debuff
+			case Action.GOALKEEPER: return new ActiveGoalkeeper(currentSP, learned); //provokes single target attacks
+			case Action.EJECTMONEY: return new ActiveEjectMoney(currentSP, learned); //strong attack, uses money
+			case Action.SYSTEMREBOOT: return new ActiveSystemReboot(currentSP, learned); //fully heal self + remove statuses, may fail
+			case Action.MALFUNCTION: return new ActiveMalfunction(currentSP, learned); //random damage to random targets
+			case Action.OVERLOAD: return new ActiveOverload(currentSP, learned); //consume all MP to do high lightning damage to all
+			case Action.SQUIRTOIL: return new ActiveSquirtOil(currentSP, learned); //gives Oil status (higher damage from fire)
+			case Action.INSTALLVIRUS: return new ActiveInstallVirus(currentSP, learned); //def/mdef debuff
+			case Action.ROBOTBEAM: return new ActiveRobotBeam(currentSP, learned); //neutral magic, one target
 		}
 		
 		return null;
@@ -96,6 +116,11 @@ public class ActiveSkill
  */
 class ActiveBrianPunch extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveBrianPunch()
 	{
 		this(0, false);
@@ -121,12 +146,17 @@ class ActiveBrianPunch extends ActiveSkill
 	
 	public int getCost(Unit character)
 	{
-		return 25;
+		return 25; //TODO: work on the costs for all skills (they're all just 25)
 	}
 }
 
 class ActiveBrianSmash extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveBrianSmash()
 	{
 		this(0, false);
@@ -158,6 +188,11 @@ class ActiveBrianSmash extends ActiveSkill
 
 class ActiveCheezItBlast extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveCheezItBlast()
 	{
 		this(0, false);
@@ -189,6 +224,11 @@ class ActiveCheezItBlast extends ActiveSkill
 
 class ActiveCoolRanchLaser extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveCoolRanchLaser()
 	{
 		this(0, false);
@@ -220,6 +260,11 @@ class ActiveCoolRanchLaser extends ActiveSkill
 
 class ActiveFlavorExplosion extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveFlavorExplosion()
 	{
 		this(0, false);
@@ -251,6 +296,11 @@ class ActiveFlavorExplosion extends ActiveSkill
 
 class ActiveMtnDewWave extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveMtnDewWave()
 	{
 		this(0, false);
@@ -282,6 +332,11 @@ class ActiveMtnDewWave extends ActiveSkill
 
 class ActiveGottaGoFast extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveGottaGoFast()
 	{
 		this(0, false);
@@ -313,6 +368,11 @@ class ActiveGottaGoFast extends ActiveSkill
 
 class ActiveGottaGoFaster extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveGottaGoFaster()
 	{
 		this(0, false);
@@ -344,6 +404,11 @@ class ActiveGottaGoFaster extends ActiveSkill
 
 class ActiveMurder extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveMurder()
 	{
 		this(0, false);
@@ -375,6 +440,11 @@ class ActiveMurder extends ActiveSkill
 
 class ActiveMassMurder extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveMassMurder()
 	{
 		this(0, false);
@@ -409,6 +479,11 @@ class ActiveMassMurder extends ActiveSkill
  */
 class ActiveBarf extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveBarf()
 	{
 		this(0, false);
@@ -440,6 +515,11 @@ class ActiveBarf extends ActiveSkill
 
 class ActiveFlail extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveFlail()
 	{
 		this(0, false);
@@ -471,6 +551,11 @@ class ActiveFlail extends ActiveSkill
 
 class ActiveAnnoy extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveAnnoy()
 	{
 		this(0, false);
@@ -502,6 +587,11 @@ class ActiveAnnoy extends ActiveSkill
 
 class ActiveCower extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveCower()
 	{
 		this(0, false);
@@ -533,6 +623,11 @@ class ActiveCower extends ActiveSkill
 
 class ActiveShriek extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveShriek()
 	{
 		this(0, false);
@@ -564,6 +659,11 @@ class ActiveShriek extends ActiveSkill
 
 class ActiveEatPopTart extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveEatPopTart()
 	{
 		this(0, false);
@@ -595,6 +695,11 @@ class ActiveEatPopTart extends ActiveSkill
 
 class ActiveKamikaze extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveKamikaze()
 	{
 		this(0, false);
@@ -626,6 +731,11 @@ class ActiveKamikaze extends ActiveSkill
 
 class ActiveVomitEruption extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveVomitEruption()
 	{
 		this(0, false);
@@ -657,6 +767,11 @@ class ActiveVomitEruption extends ActiveSkill
 
 class ActiveSummonTrains extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveSummonTrains()
 	{
 		this(0, false);
@@ -687,10 +802,15 @@ class ActiveSummonTrains extends ActiveSkill
 }
 
 /**
- * Ryan
+ * Hank
  */
 class ActiveBlessingOfArino extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveBlessingOfArino()
 	{
 		this(0, false);
@@ -706,7 +826,7 @@ class ActiveBlessingOfArino extends ActiveSkill
 	
 	public boolean canLearn(Unit character)
 	{
-		if(character.id == Character.RYAN)
+		if(character.id == Character.HANK)
 		{
 			return true;
 		}
@@ -722,6 +842,11 @@ class ActiveBlessingOfArino extends ActiveSkill
 
 class ActiveBlessingOfMiku extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveBlessingOfMiku()
 	{
 		this(0, false);
@@ -737,7 +862,7 @@ class ActiveBlessingOfMiku extends ActiveSkill
 	
 	public boolean canLearn(Unit character)
 	{
-		if(character.id == Character.RYAN)
+		if(character.id == Character.HANK)
 		{
 			return true;
 		}
@@ -753,6 +878,11 @@ class ActiveBlessingOfMiku extends ActiveSkill
 
 class ActiveMysteriousMelody extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveMysteriousMelody()
 	{
 		this(0, false);
@@ -768,7 +898,7 @@ class ActiveMysteriousMelody extends ActiveSkill
 	
 	public boolean canLearn(Unit character)
 	{
-		if(character.id == Character.RYAN)
+		if(character.id == Character.HANK)
 		{
 			return true;
 		}
@@ -784,6 +914,11 @@ class ActiveMysteriousMelody extends ActiveSkill
 
 class ActiveBajaBlast extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveBajaBlast()
 	{
 		this(0, false);
@@ -799,7 +934,7 @@ class ActiveBajaBlast extends ActiveSkill
 	
 	public boolean canLearn(Unit character)
 	{
-		if(character.id == Character.RYAN)
+		if(character.id == Character.HANK)
 		{
 			return true;
 		}
@@ -815,6 +950,11 @@ class ActiveBajaBlast extends ActiveSkill
 
 class ActiveBlueShield extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveBlueShield()
 	{
 		this(0, false);
@@ -830,7 +970,7 @@ class ActiveBlueShield extends ActiveSkill
 	
 	public boolean canLearn(Unit character)
 	{
-		if(character.id == Character.RYAN)
+		if(character.id == Character.HANK)
 		{
 			return true;
 		}
@@ -846,6 +986,11 @@ class ActiveBlueShield extends ActiveSkill
 
 class ActiveBlueBarrier extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveBlueBarrier()
 	{
 		this(0, false);
@@ -861,7 +1006,7 @@ class ActiveBlueBarrier extends ActiveSkill
 	
 	public boolean canLearn(Unit character)
 	{
-		if(character.id == Character.RYAN)
+		if(character.id == Character.HANK)
 		{
 			return true;
 		}
@@ -877,6 +1022,11 @@ class ActiveBlueBarrier extends ActiveSkill
 
 class ActiveSillyDance extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveSillyDance()
 	{
 		this(0, false);
@@ -892,7 +1042,7 @@ class ActiveSillyDance extends ActiveSkill
 	
 	public boolean canLearn(Unit character)
 	{
-		if(character.id == Character.RYAN)
+		if(character.id == Character.HANK)
 		{
 			return true;
 		}
@@ -908,6 +1058,11 @@ class ActiveSillyDance extends ActiveSkill
 
 class ActiveAmp extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveAmp()
 	{
 		this(0, false);
@@ -923,7 +1078,7 @@ class ActiveAmp extends ActiveSkill
 	
 	public boolean canLearn(Unit character)
 	{
-		if(character.id == Character.RYAN)
+		if(character.id == Character.HANK)
 		{
 			return true;
 		}
@@ -939,6 +1094,11 @@ class ActiveAmp extends ActiveSkill
 
 class ActiveRadicalRiff extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveRadicalRiff()
 	{
 		this(0, false);
@@ -954,7 +1114,7 @@ class ActiveRadicalRiff extends ActiveSkill
 	
 	public boolean canLearn(Unit character)
 	{
-		if(character.id == Character.RYAN)
+		if(character.id == Character.HANK)
 		{
 			return true;
 		}
@@ -970,6 +1130,11 @@ class ActiveRadicalRiff extends ActiveSkill
 
 class ActiveChiptuneOfLife extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveChiptuneOfLife()
 	{
 		this(0, false);
@@ -985,7 +1150,43 @@ class ActiveChiptuneOfLife extends ActiveSkill
 	
 	public boolean canLearn(Unit character)
 	{
-		if(character.id == Character.RYAN)
+		if(character.id == Character.HANK)
+		{
+			return true;
+		}
+		
+		return false;
+	}
+	
+	public int getCost(Unit character)
+	{
+		return 25;
+	}
+}
+
+class ActiveSoothingSong extends ActiveSkill
+{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	public ActiveSoothingSong()
+	{
+		this(0, false);
+	}
+	
+	public ActiveSoothingSong(int currentSP, boolean learned)
+	{
+		this.id = Action.SOOTHINGSONG;
+		this.currentSP = currentSP;
+		this.learned = learned;
+		this.action = new SoothingSong();
+	}
+	
+	public boolean canLearn(Unit character)
+	{
+		if(character.id == Character.HANK)
 		{
 			return true;
 		}
@@ -1004,6 +1205,11 @@ class ActiveChiptuneOfLife extends ActiveSkill
  */
 class ActiveShuriken extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveShuriken()
 	{
 		this(0, false);
@@ -1035,6 +1241,11 @@ class ActiveShuriken extends ActiveSkill
 
 class ActiveKageShadows extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveKageShadows()
 	{
 		this(0, false);
@@ -1066,6 +1277,11 @@ class ActiveKageShadows extends ActiveSkill
 
 class ActiveInflictShame extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveInflictShame()
 	{
 		this(0, false);
@@ -1097,6 +1313,11 @@ class ActiveInflictShame extends ActiveSkill
 
 class ActiveDefendHonor extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveDefendHonor()
 	{
 		this(0, false);
@@ -1128,6 +1349,11 @@ class ActiveDefendHonor extends ActiveSkill
 
 class ActiveHonorForAll extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveHonorForAll()
 	{
 		this(0, false);
@@ -1159,6 +1385,11 @@ class ActiveHonorForAll extends ActiveSkill
 
 class ActiveNinjutsuSlice extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveNinjutsuSlice()
 	{
 		this(0, false);
@@ -1190,6 +1421,11 @@ class ActiveNinjutsuSlice extends ActiveSkill
 
 class ActiveSamuraiSlash extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveSamuraiSlash()
 	{
 		this(0, false);
@@ -1221,6 +1457,11 @@ class ActiveSamuraiSlash extends ActiveSkill
 
 class ActiveBushidoBlade extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveBushidoBlade()
 	{
 		this(0, false);
@@ -1252,6 +1493,11 @@ class ActiveBushidoBlade extends ActiveSkill
 
 class ActiveMuramasamara extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveMuramasamara()
 	{
 		this(0, false);
@@ -1286,6 +1532,11 @@ class ActiveMuramasamara extends ActiveSkill
  */
 class ActiveFire extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveFire()
 	{
 		this(0, false);
@@ -1317,6 +1568,11 @@ class ActiveFire extends ActiveSkill
 
 class ActiveBigFire extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveBigFire()
 	{
 		this(0, false);
@@ -1348,6 +1604,11 @@ class ActiveBigFire extends ActiveSkill
 
 class ActiveLightningBolt extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveLightningBolt()
 	{
 		this(0, false);
@@ -1379,6 +1640,11 @@ class ActiveLightningBolt extends ActiveSkill
 
 class ActiveLightningStorm extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveLightningStorm()
 	{
 		this(0, false);
@@ -1410,6 +1676,11 @@ class ActiveLightningStorm extends ActiveSkill
 
 class ActiveEarthSpike extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveEarthSpike()
 	{
 		this(0, false);
@@ -1441,6 +1712,11 @@ class ActiveEarthSpike extends ActiveSkill
 
 class ActiveEarthquake extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveEarthquake()
 	{
 		this(0, false);
@@ -1472,6 +1748,11 @@ class ActiveEarthquake extends ActiveSkill
 
 class ActiveSteal extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveSteal()
 	{
 		this(0, false);
@@ -1503,6 +1784,11 @@ class ActiveSteal extends ActiveSkill
 
 class ActivePurr extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActivePurr()
 	{
 		this(0, false);
@@ -1534,6 +1820,11 @@ class ActivePurr extends ActiveSkill
 
 class ActiveCatNap extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveCatNap()
 	{
 		this(0, false);
@@ -1565,6 +1856,11 @@ class ActiveCatNap extends ActiveSkill
 
 class ActiveCatScratch extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveCatScratch()
 	{
 		this(0, false);
@@ -1596,6 +1892,11 @@ class ActiveCatScratch extends ActiveSkill
 
 class ActiveDevour extends ActiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ActiveDevour()
 	{
 		this(0, false);
@@ -1612,6 +1913,370 @@ class ActiveDevour extends ActiveSkill
 	public boolean canLearn(Unit character)
 	{
 		if(character.id == Character.KITTEN)
+		{
+			return true;
+		}
+		
+		return false;
+	}
+	
+	public int getCost(Unit character)
+	{
+		return 25;
+	}
+}
+
+/**
+ * Kev-Bot
+ */
+
+class ActiveDischarge extends ActiveSkill
+{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	public ActiveDischarge()
+	{
+		this(0, false);
+	}
+	
+	public ActiveDischarge(int currentSP, boolean learned)
+	{
+		this.id = Action.DISCHARGE;
+		this.currentSP = currentSP;
+		this.learned = learned;
+		this.action = new Discharge();
+	}
+	
+	public boolean canLearn(Unit character)
+	{
+		if(character.id == Character.KEVBOT)
+		{
+			return true;
+		}
+		
+		return false;
+	}
+	
+	public int getCost(Unit character)
+	{
+		return 25;
+	}
+}
+
+class ActiveRobotTears extends ActiveSkill
+{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	public ActiveRobotTears()
+	{
+		this(0, false);
+	}
+	
+	public ActiveRobotTears(int currentSP, boolean learned)
+	{
+		this.id = Action.ROBOTTEARS;
+		this.currentSP = currentSP;
+		this.learned = learned;
+		this.action = new RobotTears();
+	}
+	
+	public boolean canLearn(Unit character)
+	{
+		if(character.id == Character.KEVBOT)
+		{
+			return true;
+		}
+		
+		return false;
+	}
+	
+	public int getCost(Unit character)
+	{
+		return 25;
+	}
+}
+
+class ActiveGoalkeeper extends ActiveSkill
+{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	public ActiveGoalkeeper()
+	{
+		this(0, false);
+	}
+	
+	public ActiveGoalkeeper(int currentSP, boolean learned)
+	{
+		this.id = Action.GOALKEEPER;
+		this.currentSP = currentSP;
+		this.learned = learned;
+		this.action = new Goalkeeper();
+	}
+	
+	public boolean canLearn(Unit character)
+	{
+		if(character.id == Character.KEVBOT)
+		{
+			return true;
+		}
+		
+		return false;
+	}
+	
+	public int getCost(Unit character)
+	{
+		return 25;
+	}
+}
+
+class ActiveEjectMoney extends ActiveSkill
+{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	public ActiveEjectMoney()
+	{
+		this(0, false);
+	}
+	
+	public ActiveEjectMoney(int currentSP, boolean learned)
+	{
+		this.id = Action.EJECTMONEY;
+		this.currentSP = currentSP;
+		this.learned = learned;
+		this.action = new EjectMoney();
+	}
+	
+	public boolean canLearn(Unit character)
+	{
+		if(character.id == Character.KEVBOT)
+		{
+			return true;
+		}
+		
+		return false;
+	}
+	
+	public int getCost(Unit character)
+	{
+		return 25;
+	}
+}
+
+class ActiveSystemReboot extends ActiveSkill
+{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	public ActiveSystemReboot()
+	{
+		this(0, false);
+	}
+	
+	public ActiveSystemReboot(int currentSP, boolean learned)
+	{
+		this.id = Action.SYSTEMREBOOT;
+		this.currentSP = currentSP;
+		this.learned = learned;
+		this.action = new SystemReboot();
+	}
+	
+	public boolean canLearn(Unit character)
+	{
+		if(character.id == Character.KEVBOT)
+		{
+			return true;
+		}
+		
+		return false;
+	}
+	
+	public int getCost(Unit character)
+	{
+		return 25;
+	}
+}
+
+class ActiveMalfunction extends ActiveSkill
+{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	public ActiveMalfunction()
+	{
+		this(0, false);
+	}
+	
+	public ActiveMalfunction(int currentSP, boolean learned)
+	{
+		this.id = Action.MALFUNCTION;
+		this.currentSP = currentSP;
+		this.learned = learned;
+		this.action = new Malfunction();
+	}
+	
+	public boolean canLearn(Unit character)
+	{
+		if(character.id == Character.KEVBOT)
+		{
+			return true;
+		}
+		
+		return false;
+	}
+	
+	public int getCost(Unit character)
+	{
+		return 25;
+	}
+}
+
+class ActiveOverload extends ActiveSkill
+{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	public ActiveOverload()
+	{
+		this(0, false);
+	}
+	
+	public ActiveOverload(int currentSP, boolean learned)
+	{
+		this.id = Action.OVERLOAD;
+		this.currentSP = currentSP;
+		this.learned = learned;
+		this.action = new Overload();
+	}
+	
+	public boolean canLearn(Unit character)
+	{
+		if(character.id == Character.KEVBOT)
+		{
+			return true;
+		}
+		
+		return false;
+	}
+	
+	public int getCost(Unit character)
+	{
+		return 25;
+	}
+}
+
+class ActiveSquirtOil extends ActiveSkill
+{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	public ActiveSquirtOil()
+	{
+		this(0, false);
+	}
+	
+	public ActiveSquirtOil(int currentSP, boolean learned)
+	{
+		this.id = Action.SQUIRTOIL;
+		this.currentSP = currentSP;
+		this.learned = learned;
+		this.action = new SquirtOil();
+	}
+	
+	public boolean canLearn(Unit character)
+	{
+		if(character.id == Character.KEVBOT)
+		{
+			return true;
+		}
+		
+		return false;
+	}
+	
+	public int getCost(Unit character)
+	{
+		return 25;
+	}
+}
+
+class ActiveInstallVirus extends ActiveSkill
+{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	public ActiveInstallVirus()
+	{
+		this(0, false);
+	}
+	
+	public ActiveInstallVirus(int currentSP, boolean learned)
+	{
+		this.id = Action.INSTALLVIRUS;
+		this.currentSP = currentSP;
+		this.learned = learned;
+		this.action = new InstallVirus();
+	}
+	
+	public boolean canLearn(Unit character)
+	{
+		if(character.id == Character.KEVBOT)
+		{
+			return true;
+		}
+		
+		return false;
+	}
+	
+	public int getCost(Unit character)
+	{
+		return 25;
+	}
+}
+
+class ActiveRobotBeam extends ActiveSkill
+{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	public ActiveRobotBeam()
+	{
+		this(0, false);
+	}
+	
+	public ActiveRobotBeam(int currentSP, boolean learned)
+	{
+		this.id = Action.ROBOTBEAM;
+		this.currentSP = currentSP;
+		this.learned = learned;
+		this.action = new RobotBeam();
+	}
+	
+	public boolean canLearn(Unit character)
+	{
+		if(character.id == Character.KEVBOT)
 		{
 			return true;
 		}

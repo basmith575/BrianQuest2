@@ -6,13 +6,13 @@ public class BattleAction
 {	
 	public Unit user;
 	public ArrayList<Integer> targets;
-	public ArrayList<Integer> values;
-	public ArrayList<Boolean> mp;		//true if that index in damage refers to MP
+	public ArrayList<Integer> values;	//TODO: split this out into healAmt, mpHealAmt, damage, etc.? would remove the need for "mp" bool and negative amounts
+	public ArrayList<Boolean> mp;		//true if that index in values refers to MP
 	public ArrayList<Boolean> crit;
 	public ArrayList<Boolean> miss;
 	public ArrayList<Boolean> inflictStatus;
 	public int[] animation;
-	public int action;
+	public Action action;
 	
 	//for Mysterious Melody
 	public int element;
@@ -21,7 +21,7 @@ public class BattleAction
 	public Item item;
 	public int stealOutcome;
 	
-	public BattleAction(Unit user, int action, ArrayList<Integer> targets, ArrayList<Integer> values, ArrayList<Boolean> mp, int[] animation, ArrayList<Boolean> crit, ArrayList<Boolean> miss, ArrayList<Boolean> inflictStatus)
+	public BattleAction(Unit user, Action action, ArrayList<Integer> targets, ArrayList<Integer> values, ArrayList<Boolean> mp, int[] animation, ArrayList<Boolean> crit, ArrayList<Boolean> miss, ArrayList<Boolean> inflictStatus)
 	{
 		this.user = user;
 		this.targets = targets;
@@ -33,6 +33,6 @@ public class BattleAction
 		this.inflictStatus = inflictStatus;
 		this.action = action;
 		
-		this.element = Game.NOELEMENT;
+		this.element = Game.ELEMENT_NONE;
 	}
 }

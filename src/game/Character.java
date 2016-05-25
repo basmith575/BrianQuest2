@@ -7,10 +7,10 @@ public class Character
 	public static final int NONE = -1;
 	public static final int BRIAN = 0;
 	public static final int ALEX = 1;
-	public static final int RYAN = 2;
+	public static final int HANK = 2;
 	public static final int MYCHAL = 3;
 	public static final int KITTEN = 4;
-	public static final int KEVBOT = 5; //TODO
+	public static final int KEVBOT = 5;
 }
 
 class None extends Unit
@@ -92,12 +92,12 @@ class Alex extends Unit
 	}
 }
 
-class Ryan extends Unit
+class Hank extends Unit
 {
-	public Ryan(int level, int index)
+	public Hank(int level, int index)
 	{
-		this.id = Character.RYAN;
-		this.name = "Ryan";
+		this.id = Character.HANK;
+		this.name = "Hank";
 		this.className = "Blue Bard";
 		this.level = level;
 		this.index = index;
@@ -110,11 +110,11 @@ class Ryan extends Unit
 		this.initialize();
 	}
 	
-	public Ryan(Ryan ryan)
+	public Hank(Hank hank)
 	{
-		super(ryan);
+		super(hank);
 	}
-	
+
 	public void calcBaseStats()
 	{
 		this.maxHp = (int)((110 + 7.0*this.level)*Math.pow(1.009,this.level));
@@ -194,5 +194,40 @@ class Kitten extends Unit
 		this.mag = (int)(7.0 + 0.45*this.level);
 		this.dex = (int)(5.0 + 0.30*this.level);
 		this.spd = (int)(6.0 + 0.40*this.level);
+	}
+}
+
+class KevBot extends Unit
+{
+	public KevBot(int level, int index)
+	{
+		this.id = Character.KEVBOT;
+		this.name = "Kev-Bot";
+		this.className = "Metalboy";
+		this.level = level;
+		this.index = index;
+		this.unitType = Unit.CHARACTER;
+		
+		this.imageWidth = 125;
+		this.imageHeight = 125;
+		this.spriteHeight = 125;
+		
+		initialize();
+	}
+	
+	public KevBot(KevBot kevbot)
+	{
+		super(kevbot);
+	}
+	
+	public void calcBaseStats()
+	{
+		this.maxHp = (int)((100 + 6.0*this.level)*Math.pow(1.008,this.level));
+		this.maxMp = (int)((40 + 2.5*this.level)*Math.pow(1.0025,this.level));
+		
+		this.str = (int)(4.0 + 0.35*this.level);
+		this.mag = (int)(6.0 + 0.35*this.level);
+		this.dex = (int)(7.0 + 0.40*this.level);
+		this.spd = (int)(3.0 + 0.30*this.level);
 	}
 }

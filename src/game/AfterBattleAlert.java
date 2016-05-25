@@ -22,12 +22,12 @@ public class AfterBattleAlert
 		
 		for(int i=0; i<allAlerts.size(); i++)
 		{
-			if(alerts.get(i).characterIndex == index)
+			if(allAlerts.get(i).characterIndex == index)
 			{
 				alerts.add(allAlerts.get(i));
 			}
 		}
 		
-		return allAlerts;
+		return alerts;
 	}
 }

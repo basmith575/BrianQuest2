@@ -7,11 +7,25 @@ public class Test
 {
 	public static void main(String[] args)
 	{
-		//dmgTest();
+		Unit brian = new Brian(1,0);
+		brian.equip[Unit.WEAPON] = new BadSword(1);
+		brian.recalculateStats();
+		brian.str = 20;
+		brian.atk = 20;
 		
-		int money = 100;
+		Unit snake = new Snake(0);
 		
-		System.out.println(money * 1.5);
+		Action attack = new Attack();
+		for(int i=0; i<=25; i++)
+		{
+			snake.def = i;
+			
+			System.out.print(i + ": " + (int) attack.calculateDamage(brian,snake));
+			
+			double newDmg = (5.0 + ((brian.str + (brian.level/7.0) + brian.atk)*(brian.str * brian.atk))/32.0)*(20.0/(20.0+snake.def)) - snake.def;
+			
+			System.out.println("\t" + (int) newDmg);
+		}
 	}
 	
 	public static void dmgTest()
@@ -20,7 +34,7 @@ public class Test
 		user.equip[Unit.WEAPON] = new BadSword(1);
 		user.recalculateStats();
 		
-		Snake snake = new Snake();
+		Snake snake = new Snake(0);
 		snake.mag = 30;
 		
 		int[][] damage = new int[99][8];
@@ -106,5 +120,67 @@ public class Test
 			test[dir] = 1;
 			System.out.println("Adding link " + dir);
 		}
+	}
+	
+	public static void inheritanceTest()
+	{
+		ArrayList<Master> elements = new ArrayList<Master>();
+		elements.add(new Slave1());
+		elements.add(new Slave2());
+		
+		System.out.println(elements.get(0).test(1));
+		System.out.println(elements.get(1).test(1));
+	}
+	
+	public static void monsterTest()
+	{
+		ArrayList<Monster> monsters = new ArrayList<Monster>();
+		monsters.add(new Snake(0));
+		monsters.add(new SnakeKing(1));
+		
+		MonsterAction action1 = monsters.get(0).getActionTest();
+		MonsterAction action2 = monsters.get(1).getActionTest();
+		
+		System.out.println("action 1 = " + action1.action);
+		System.out.println("action 2 = " + action2.action);
+	}
+}
+
+class Master
+{
+	public Master()
+	{
+		
+	}
+	
+	public String test(int a)
+	{
+		return "Master " + a;
+	}
+}
+
+class Slave1 extends Master
+{
+	public Slave1()
+	{
+		
+	}
+	
+	public String test(int a)
+	{
+		return "Slave1 " + a;
+	}
+}
+
+class Slave2 extends Master
+{
+	public Slave2()
+	{
+		
+	}
+	
+	public String test(int a)
+	{
+		return "Slave2 " + a;
 	}
 }

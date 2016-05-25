@@ -1,8 +1,13 @@
 package game;
 
-public class PassiveSkill
+public class PassiveSkill implements java.io.Serializable
 {
-	public static final int NUMPASSIVESKILLS = 72;
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	public static final int NUMPASSIVESKILLS = 76;
 	
 	public static final int HPPLUS10 = 0;					//Raises Max HP by 10%
 	public static final int HPPLUS20 = 1;					//Raises Max HP by 20%
@@ -39,7 +44,7 @@ public class PassiveSkill
 	public static final int EARTHELEMENTRESIST = 28;		//Raises Earth element resistance (% based on Dex)
 	public static final int EARTHELEMENTATTACK = 29;		//Makes attacks do Earth element damage (% based on Dex)
 	
-	//Ryan
+	//Hank
 	public static final int MPATTACK = 30;					//Normal attacks deal boosted damage but consume MP
 	public static final int WATERELEMENTRESIST = 31;		//Raises Water element resistance (% based on Dex)
 	public static final int WATERELEMENTATTACK = 32;		//Makes attacks do Water element damage (% based on Dex)
@@ -65,7 +70,7 @@ public class PassiveSkill
 	public static final int LIGHTNINGELEMENTATTACK = 46;	//Makes attacks do Lightning element damage (% based on Dex)
 	
 	
-	public static final int POISONSTATUSRESIST = 47;		//Increase Poison status resistance (% based on Dex)		TODO: have actual names for these passives
+	public static final int POISONSTATUSRESIST = 47;		//Increase Poison status resistance (% based on Dex)		TODO: have actual names for these passives?
 	public static final int SILENCESTATUSRESIST = 48;		//Increase Silence status resistance (% based on Dex)
 	public static final int BLINDSTATUSRESIST = 49;			//Increase Blind status resistance (% based on Dex)
 	public static final int SLEEPSTATUSRESIST = 50;			//Increase Sleep status resistance (% based on Dex)
@@ -90,6 +95,10 @@ public class PassiveSkill
 	public static final int ENCOUNTERHALF = 69;				//Halves the random encounter rate
 	public static final int ENCOUNTERNONE = 70;				//No random encounters
 	public static final int MPHALF = 71;					//Skills cost half MP (rounded up)
+	public static final int DARKELEMENTRESIST = 72;			//Raises Dark element resistance (% based on Dex)
+	public static final int DARKELEMENTATTACK = 73;			//Makes attacks do Dark element damage (% based on Dex)
+	public static final int HOLYELEMENTRESIST = 74;			//Raises Holy element resistance (% based on Dex)
+	public static final int HOLYELEMENTATTACK = 75;			//Makes attacks do Holy element damage (% based on Dex)
 	
 	public int id;
 	public String name;
@@ -148,7 +157,7 @@ public class PassiveSkill
 			case EARTHELEMENTRESIST: return new EarthElementResist(currentSP, learned, equipped);
 			case EARTHELEMENTATTACK: return new EarthElementAttack(currentSP, learned, equipped);
 			
-			//Ryan
+			//Hank
 			case MPATTACK: return new MPAttack(currentSP, learned, equipped);
 			case WATERELEMENTRESIST: return new WaterElementResist(currentSP, learned, equipped);
 			case WATERELEMENTATTACK: return new WaterElementAttack(currentSP, learned, equipped);
@@ -198,6 +207,10 @@ public class PassiveSkill
 			case ENCOUNTERHALF: return new EncounterHalf(currentSP, learned, equipped);
 			case ENCOUNTERNONE: return new EncounterNone(currentSP, learned, equipped);
 			case MPHALF: return new MPHalf(currentSP, learned, equipped);
+			case DARKELEMENTRESIST: return new DarkElementResist(currentSP, learned, equipped);
+			case DARKELEMENTATTACK: return new DarkElementAttack(currentSP, learned, equipped);
+			case HOLYELEMENTRESIST: return new HolyElementResist(currentSP, learned, equipped);
+			case HOLYELEMENTATTACK: return new HolyElementAttack(currentSP, learned, equipped);
 		}
 		
 		return null;
@@ -222,6 +235,11 @@ public class PassiveSkill
 
 class HPPlus10 extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public HPPlus10()
 	{
 		this(0, false, false);
@@ -257,6 +275,11 @@ class HPPlus10 extends PassiveSkill
 
 class HPPlus20 extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public HPPlus20()
 	{
 		this(0, false, false);
@@ -297,6 +320,11 @@ class HPPlus20 extends PassiveSkill
 
 class MPPlus10 extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public MPPlus10()
 	{
 		this(0, false, false);
@@ -332,6 +360,11 @@ class MPPlus10 extends PassiveSkill
 
 class MPPlus20 extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public MPPlus20()
 	{
 		this(0, false, false);
@@ -372,6 +405,11 @@ class MPPlus20 extends PassiveSkill
 
 class StrPlus1 extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public StrPlus1()
 	{
 		this(0, false, false);
@@ -407,6 +445,11 @@ class StrPlus1 extends PassiveSkill
 
 class StrPlus2 extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public StrPlus2()
 	{
 		this(0, false, false);
@@ -447,6 +490,11 @@ class StrPlus2 extends PassiveSkill
 
 class MagPlus1 extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public MagPlus1()
 	{
 		this(0, false, false);
@@ -482,6 +530,11 @@ class MagPlus1 extends PassiveSkill
 
 class MagPlus2 extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public MagPlus2()
 	{
 		this(0, false, false);
@@ -522,6 +575,11 @@ class MagPlus2 extends PassiveSkill
 
 class DexPlus1 extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public DexPlus1()
 	{
 		this(0, false, false);
@@ -557,6 +615,11 @@ class DexPlus1 extends PassiveSkill
 
 class DexPlus2 extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public DexPlus2()
 	{
 		this(0, false, false);
@@ -581,7 +644,7 @@ class DexPlus2 extends PassiveSkill
 	
 	public boolean canLearn(Unit character)
 	{
-		if(character.id == Character.RYAN)
+		if(character.id == Character.HANK)
 		{
 			return true;
 		}
@@ -597,6 +660,11 @@ class DexPlus2 extends PassiveSkill
 
 class SpdPlus1 extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public SpdPlus1()
 	{
 		this(0, false, false);
@@ -632,6 +700,11 @@ class SpdPlus1 extends PassiveSkill
 
 class SpdPlus2 extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public SpdPlus2()
 	{
 		this(0, false, false);
@@ -672,6 +745,11 @@ class SpdPlus2 extends PassiveSkill
 
 class DefPlus1 extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public DefPlus1()
 	{
 		this(0, false, false);
@@ -707,6 +785,11 @@ class DefPlus1 extends PassiveSkill
 
 class DefPlus2 extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public DefPlus2()
 	{
 		this(0, false, false);
@@ -747,6 +830,11 @@ class DefPlus2 extends PassiveSkill
 
 class MDefPlus1 extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public MDefPlus1()
 	{
 		this(0, false, false);
@@ -782,6 +870,11 @@ class MDefPlus1 extends PassiveSkill
 
 class MDefPlus2 extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public MDefPlus2()
 	{
 		this(0, false, false);
@@ -806,7 +899,7 @@ class MDefPlus2 extends PassiveSkill
 	
 	public boolean canLearn(Unit character)
 	{
-		if(character.id == Character.RYAN || character.id == Character.KEVBOT)
+		if(character.id == Character.HANK || character.id == Character.KEVBOT)
 		{
 			return true;
 		}
@@ -822,6 +915,11 @@ class MDefPlus2 extends PassiveSkill
 
 class CritPlus5 extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public CritPlus5()
 	{
 		this(0, false, false);
@@ -862,6 +960,11 @@ class CritPlus5 extends PassiveSkill
 
 class HitPlus10 extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public HitPlus10()
 	{
 		this(0, false, false);
@@ -897,6 +1000,11 @@ class HitPlus10 extends PassiveSkill
 
 class EvasionPlus10 extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public EvasionPlus10()
 	{
 		this(0, false, false);
@@ -932,6 +1040,11 @@ class EvasionPlus10 extends PassiveSkill
 
 class EvasionPlus15 extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public EvasionPlus15()
 	{
 		this(0, false, false);
@@ -972,6 +1085,11 @@ class EvasionPlus15 extends PassiveSkill
 
 class DrainLife extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public DrainLife()
 	{
 		this(0, false, false);
@@ -1012,6 +1130,11 @@ class DrainLife extends PassiveSkill
 
 class SnackElementResist extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public SnackElementResist()
 	{
 		this(0, false, false);
@@ -1033,7 +1156,7 @@ class SnackElementResist extends PassiveSkill
 	{
 		int resistAmt = 20 + 3*character.dex; //TODO: work on this formula?
 		
-		character.elementResistance[Game.SNACK] += resistAmt; 
+		character.elementResistance[Game.ELEMENT_SNACK] += resistAmt; 
 	}
 	
 	public boolean canLearn(Unit character)
@@ -1054,6 +1177,11 @@ class SnackElementResist extends PassiveSkill
 
 class SnackElementAttack extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public SnackElementAttack()
 	{
 		this(0, false, false);
@@ -1094,6 +1222,11 @@ class SnackElementAttack extends PassiveSkill
 
 class MeScared extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public MeScared()
 	{
 		this(0, false, false);
@@ -1134,6 +1267,11 @@ class MeScared extends PassiveSkill
 
 class Miracle extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public Miracle()
 	{
 		this(0, false, false);
@@ -1153,7 +1291,7 @@ class Miracle extends PassiveSkill
 	
 	public void process(Unit character)
 	{
-		//looks at this in Unit.doDamage()
+		//looks at this in Game.STATUS_doDamage()
 	}
 	
 	public boolean canLearn(Unit character)
@@ -1174,6 +1312,11 @@ class Miracle extends PassiveSkill
 
 class IgnoranceIsBliss extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public IgnoranceIsBliss()
 	{
 		this(0, false, false);
@@ -1214,6 +1357,11 @@ class IgnoranceIsBliss extends PassiveSkill
 
 class FoolsFortune extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public FoolsFortune()
 	{
 		this(0, false, false);
@@ -1254,6 +1402,11 @@ class FoolsFortune extends PassiveSkill
 
 class Enlightenment extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public Enlightenment()
 	{
 		this(0, false, false);
@@ -1301,6 +1454,11 @@ class Enlightenment extends PassiveSkill
 
 class EarthElementResist extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public EarthElementResist()
 	{
 		this(0, false, false);
@@ -1322,7 +1480,7 @@ class EarthElementResist extends PassiveSkill
 	{
 		int resistAmt = 20 + 3*character.dex; //TODO: work on this formula?
 		
-		character.elementResistance[Game.EARTH] += resistAmt; 
+		character.elementResistance[Game.ELEMENT_EARTH] += resistAmt; 
 	}
 	
 	public boolean canLearn(Unit character)
@@ -1343,6 +1501,11 @@ class EarthElementResist extends PassiveSkill
 
 class EarthElementAttack extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public EarthElementAttack()
 	{
 		this(0, false, false);
@@ -1383,6 +1546,11 @@ class EarthElementAttack extends PassiveSkill
 
 class MPAttack extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public MPAttack()
 	{
 		this(0, false, false);
@@ -1407,7 +1575,7 @@ class MPAttack extends PassiveSkill
 	
 	public boolean canLearn(Unit character)
 	{
-		if(character.id == Character.RYAN)
+		if(character.id == Character.HANK)
 		{
 			return true;
 		}
@@ -1423,6 +1591,11 @@ class MPAttack extends PassiveSkill
 
 class WaterElementResist extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public WaterElementResist()
 	{
 		this(0, false, false);
@@ -1444,12 +1617,12 @@ class WaterElementResist extends PassiveSkill
 	{
 		int resistAmt = 20 + 3*character.dex; //TODO: work on this formula?
 		
-		character.elementResistance[Game.WATER] += resistAmt; 
+		character.elementResistance[Game.ELEMENT_WATER] += resistAmt; 
 	}
 	
 	public boolean canLearn(Unit character)
 	{
-		if(character.id == Character.RYAN)
+		if(character.id == Character.HANK)
 		{
 			return true;
 		}
@@ -1465,6 +1638,11 @@ class WaterElementResist extends PassiveSkill
 
 class WaterElementAttack extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public WaterElementAttack()
 	{
 		this(0, false, false);
@@ -1489,7 +1667,7 @@ class WaterElementAttack extends PassiveSkill
 	
 	public boolean canLearn(Unit character)
 	{
-		if(character.id == Character.RYAN)
+		if(character.id == Character.HANK)
 		{
 			return true;
 		}
@@ -1505,6 +1683,11 @@ class WaterElementAttack extends PassiveSkill
 
 class SoloArtist extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public SoloArtist()
 	{
 		this(0, false, false);
@@ -1545,6 +1728,11 @@ class SoloArtist extends PassiveSkill
 
 class FireElementResist extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public FireElementResist()
 	{
 		this(0, false, false);
@@ -1566,7 +1754,7 @@ class FireElementResist extends PassiveSkill
 	{
 		int resistAmt = 20 + 3*character.dex; //TODO: work on this formula?
 		
-		character.elementResistance[Game.FIRE] += resistAmt; 
+		character.elementResistance[Game.ELEMENT_FIRE] += resistAmt; 
 	}
 	
 	public boolean canLearn(Unit character)
@@ -1587,6 +1775,11 @@ class FireElementResist extends PassiveSkill
 
 class FireElementAttack extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public FireElementAttack()
 	{
 		this(0, false, false);
@@ -1596,7 +1789,7 @@ class FireElementAttack extends PassiveSkill
 	{
 		this.id = FIREELEMENTATTACK;
 		this.name = "Fire Ele Attack";
-		this.desc = "Weapon becomes Fire element (% based on Dex).";
+		this.desc = "Weapon becomes Fire element (% based on Dex)."; //TODO: show the actual percentage afterward in some other color (yellow? green?) to indicate that it's calculated
 		this.cubeCost = 6;
 		
 		this.currentSP = currentSP;
@@ -1627,6 +1820,11 @@ class FireElementAttack extends PassiveSkill
 
 class CatBurglar extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public CatBurglar()
 	{
 		this(0, false, false);
@@ -1667,6 +1865,11 @@ class CatBurglar extends PassiveSkill
 
 class Mug extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public Mug()
 	{
 		this(0, false, false);
@@ -1707,6 +1910,11 @@ class Mug extends PassiveSkill
 
 class PayDay extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public PayDay()
 	{
 		this(0, false, false);
@@ -1747,6 +1955,11 @@ class PayDay extends PassiveSkill
 
 class CatEyes extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public CatEyes()
 	{
 		this(0, false, false);
@@ -1787,6 +2000,11 @@ class CatEyes extends PassiveSkill
 
 class PoisonElementResist extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public PoisonElementResist()
 	{
 		this(0, false, false);
@@ -1808,7 +2026,7 @@ class PoisonElementResist extends PassiveSkill
 	{
 		int resistAmt = 20 + 3*character.dex; //TODO: work on this formula?
 		
-		character.elementResistance[Game.POISON] += resistAmt; 
+		character.elementResistance[Game.ELEMENT_POISON] += resistAmt; 
 	}
 	
 	public boolean canLearn(Unit character)
@@ -1829,6 +2047,11 @@ class PoisonElementResist extends PassiveSkill
 
 class PoisonElementAttack extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public PoisonElementAttack()
 	{
 		this(0, false, false);
@@ -1869,6 +2092,11 @@ class PoisonElementAttack extends PassiveSkill
 
 class Scan extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public Scan()
 	{
 		this(0, false, false);
@@ -1888,7 +2116,7 @@ class Scan extends PassiveSkill
 	
 	public void process(Unit character)
 	{
-		//looks at this in Game.calculateDamage() 
+		//looks at this in drawBattle()
 	}
 	
 	public boolean canLearn(Unit character)
@@ -1909,6 +2137,11 @@ class Scan extends PassiveSkill
 
 class RNGDefenses extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public RNGDefenses()
 	{
 		this(0, false, false);
@@ -1949,6 +2182,11 @@ class RNGDefenses extends PassiveSkill
 
 class DestroyHumans extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public DestroyHumans()
 	{
 		this(0, false, false);
@@ -1989,6 +2227,11 @@ class DestroyHumans extends PassiveSkill
 
 class LightningElementResist extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public LightningElementResist()
 	{
 		this(0, false, false);
@@ -2010,7 +2253,7 @@ class LightningElementResist extends PassiveSkill
 	{
 		int resistAmt = 20 + 3*character.dex; //TODO: work on this formula?
 		
-		character.elementResistance[Game.LIGHTNING] += resistAmt; 
+		character.elementResistance[Game.ELEMENT_LIGHTNING] += resistAmt; 
 	}
 	
 	public boolean canLearn(Unit character)
@@ -2031,6 +2274,11 @@ class LightningElementResist extends PassiveSkill
 
 class LightningElementAttack extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public LightningElementAttack()
 	{
 		this(0, false, false);
@@ -2071,6 +2319,11 @@ class LightningElementAttack extends PassiveSkill
 
 class PoisonStatusResist extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public PoisonStatusResist()
 	{
 		this(0, false, false);
@@ -2092,7 +2345,7 @@ class PoisonStatusResist extends PassiveSkill
 	{
 		int resistAmt = 40 + 2*character.dex; //TODO: work on this formula?
 		
-		character.statusResistance[Unit.POISON] += resistAmt;
+		character.statusResistance[Game.STATUS_POISON] += resistAmt;
 	}
 	
 	public boolean canLearn(Unit character)
@@ -2108,6 +2361,11 @@ class PoisonStatusResist extends PassiveSkill
 
 class SilenceStatusResist extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public SilenceStatusResist()
 	{
 		this(0, false, false);
@@ -2129,7 +2387,7 @@ class SilenceStatusResist extends PassiveSkill
 	{
 		int resistAmt = 40 + 2*character.dex; //TODO: work on this formula?
 		
-		character.statusResistance[Unit.SILENCE] += resistAmt; 
+		character.statusResistance[Game.STATUS_SILENCE] += resistAmt; 
 	}
 	
 	public boolean canLearn(Unit character)
@@ -2145,6 +2403,11 @@ class SilenceStatusResist extends PassiveSkill
 
 class BlindStatusResist extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public BlindStatusResist()
 	{
 		this(0, false, false);
@@ -2166,7 +2429,7 @@ class BlindStatusResist extends PassiveSkill
 	{
 		int resistAmt = 40 + 2*character.dex; //TODO: work on this formula?
 		
-		character.statusResistance[Unit.BLIND] += resistAmt; 
+		character.statusResistance[Game.STATUS_BLIND] += resistAmt; 
 	}
 	
 	public boolean canLearn(Unit character)
@@ -2182,6 +2445,11 @@ class BlindStatusResist extends PassiveSkill
 
 class SleepStatusResist extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public SleepStatusResist()
 	{
 		this(0, false, false);
@@ -2203,7 +2471,7 @@ class SleepStatusResist extends PassiveSkill
 	{
 		int resistAmt = 40 + 2*character.dex; //TODO: work on this formula?
 		
-		character.statusResistance[Unit.SLEEP] += resistAmt; 
+		character.statusResistance[Game.STATUS_SLEEP] += resistAmt; 
 	}
 	
 	public boolean canLearn(Unit character)
@@ -2219,6 +2487,11 @@ class SleepStatusResist extends PassiveSkill
 
 class SlowStatusResist extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public SlowStatusResist()
 	{
 		this(0, false, false);
@@ -2240,7 +2513,7 @@ class SlowStatusResist extends PassiveSkill
 	{
 		int resistAmt = 40 + 2*character.dex; //TODO: work on this formula?
 		
-		character.statusResistance[Unit.SLOW] += resistAmt; 
+		character.statusResistance[Game.STATUS_SLOW] += resistAmt; 
 	}
 	
 	public boolean canLearn(Unit character)
@@ -2256,6 +2529,11 @@ class SlowStatusResist extends PassiveSkill
 
 class BerserkStatusResist extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public BerserkStatusResist()
 	{
 		this(0, false, false);
@@ -2277,7 +2555,7 @@ class BerserkStatusResist extends PassiveSkill
 	{
 		int resistAmt = 40 + 2*character.dex; //TODO: work on this formula?
 		
-		character.statusResistance[Unit.BERSERK] += resistAmt; 
+		character.statusResistance[Game.STATUS_BERSERK] += resistAmt; 
 	}
 	
 	public boolean canLearn(Unit character)
@@ -2293,6 +2571,11 @@ class BerserkStatusResist extends PassiveSkill
 
 class ShameStatusResist extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ShameStatusResist()
 	{
 		this(0, false, false);
@@ -2301,7 +2584,7 @@ class ShameStatusResist extends PassiveSkill
 	public ShameStatusResist(int currentSP, boolean learned, boolean equipped)
 	{
 		this.id = SHAMESTATUSRESIST;
-		this.name = "Shame Status Resist";
+		this.name = "Shame Status Resist"; //TODO: if I give these names, make this one Otaku (since they're shameless)
 		this.desc = "Raises Shame status resistance (% based on Dex).";
 		this.cubeCost = 3;
 		
@@ -2314,7 +2597,7 @@ class ShameStatusResist extends PassiveSkill
 	{
 		int resistAmt = 40 + 2*character.dex; //TODO: work on this formula?
 		
-		character.statusResistance[Unit.SHAME] += resistAmt; 
+		character.statusResistance[Game.STATUS_SHAME] += resistAmt; 
 	}
 	
 	public boolean canLearn(Unit character)
@@ -2330,6 +2613,11 @@ class ShameStatusResist extends PassiveSkill
 
 class InflictStatusPoison extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public InflictStatusPoison()
 	{
 		this(0, false, false);
@@ -2365,6 +2653,11 @@ class InflictStatusPoison extends PassiveSkill
 
 class InflictStatusSilence extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public InflictStatusSilence()
 	{
 		this(0, false, false);
@@ -2400,6 +2693,11 @@ class InflictStatusSilence extends PassiveSkill
 
 class InflictStatusBlind extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public InflictStatusBlind()
 	{
 		this(0, false, false);
@@ -2435,6 +2733,11 @@ class InflictStatusBlind extends PassiveSkill
 
 class InflictStatusSleep extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public InflictStatusSleep()
 	{
 		this(0, false, false);
@@ -2470,6 +2773,11 @@ class InflictStatusSleep extends PassiveSkill
 
 class InflictStatusSlow extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public InflictStatusSlow()
 	{
 		this(0, false, false);
@@ -2505,6 +2813,11 @@ class InflictStatusSlow extends PassiveSkill
 
 class InflictStatusBerserk extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public InflictStatusBerserk()
 	{
 		this(0, false, false);
@@ -2540,6 +2853,11 @@ class InflictStatusBerserk extends PassiveSkill
 
 class InflictStatusShame extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public InflictStatusShame()
 	{
 		this(0, false, false);
@@ -2575,6 +2893,11 @@ class InflictStatusShame extends PassiveSkill
 
 class ItemAddict extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public ItemAddict()
 	{
 		this(0, false, false);
@@ -2610,6 +2933,11 @@ class ItemAddict extends PassiveSkill
 
 class AutoRegen extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public AutoRegen()
 	{
 		this(0, false, false);
@@ -2645,6 +2973,11 @@ class AutoRegen extends PassiveSkill
 
 class AutoHaste extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public AutoHaste()
 	{
 		this(0, false, false);
@@ -2680,6 +3013,11 @@ class AutoHaste extends PassiveSkill
 
 class AutoBerserk extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public AutoBerserk()
 	{
 		this(0, false, false);
@@ -2715,6 +3053,11 @@ class AutoBerserk extends PassiveSkill
 
 class AutoProtect extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public AutoProtect()
 	{
 		this(0, false, false);
@@ -2750,6 +3093,11 @@ class AutoProtect extends PassiveSkill
 
 class AutoShell extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public AutoShell()
 	{
 		this(0, false, false);
@@ -2785,6 +3133,11 @@ class AutoShell extends PassiveSkill
 
 class EXPBoost extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public EXPBoost()
 	{
 		this(0, false, false);
@@ -2820,6 +3173,11 @@ class EXPBoost extends PassiveSkill
 
 class SPBoost extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public SPBoost()
 	{
 		this(0, false, false);
@@ -2855,6 +3213,11 @@ class SPBoost extends PassiveSkill
 
 class EncounterHalf extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public EncounterHalf()
 	{
 		this(0, false, false);
@@ -2890,6 +3253,11 @@ class EncounterHalf extends PassiveSkill
 
 class EncounterNone extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public EncounterNone()
 	{
 		this(0, false, false);
@@ -2925,6 +3293,11 @@ class EncounterNone extends PassiveSkill
 
 class MPHalf extends PassiveSkill
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public MPHalf()
 	{
 		this(0, false, false);
@@ -2955,5 +3328,169 @@ class MPHalf extends PassiveSkill
 	public int getCost(Unit character)
 	{
 		return 250;
+	}
+}
+
+class DarkElementResist extends PassiveSkill
+{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	public DarkElementResist()
+	{
+		this(0, false, false);
+	}
+	
+	public DarkElementResist(int currentSP, boolean learned, boolean equipped)
+	{
+		this.id = DARKELEMENTRESIST;
+		this.name = "Dark Ele Resist";
+		this.desc = "Raises Dark Element resist (% based on Dex).";
+		this.cubeCost = 4;
+		
+		this.currentSP = currentSP;
+		this.learned = learned;
+		this.equipped = equipped;
+	}
+	
+	public void process(Unit character)
+	{
+		int resistAmt = 20 + 3*character.dex; //TODO: work on this formula?
+		
+		character.elementResistance[Game.ELEMENT_DARK] += resistAmt; 
+	}
+	
+	public boolean canLearn(Unit character)
+	{
+		return true; //TODO: who can learn? anyone?
+	}
+	
+	public int getCost(Unit character)
+	{
+		return 75;
+	}
+}
+
+class DarkElementAttack extends PassiveSkill
+{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	public DarkElementAttack()
+	{
+		this(0, false, false);
+	}
+	
+	public DarkElementAttack(int currentSP, boolean learned, boolean equipped)
+	{
+		this.id = DARKELEMENTATTACK;
+		this.name = "Dark Ele Attack";
+		this.desc = "Weapon becomes Dark element (% based on Dex).";
+		this.cubeCost = 6;
+		
+		this.currentSP = currentSP;
+		this.learned = learned;
+		this.equipped = equipped;
+	}
+	
+	public void process(Unit character)
+	{
+		//looks at this in Game.calculateDamage() 
+	}
+	
+	public boolean canLearn(Unit character)
+	{
+		return true; //TODO: who can learn? anyone?
+	}
+	
+	public int getCost(Unit character)
+	{
+		return 90;
+	}
+}
+
+class HolyElementResist extends PassiveSkill
+{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	public HolyElementResist()
+	{
+		this(0, false, false);
+	}
+	
+	public HolyElementResist(int currentSP, boolean learned, boolean equipped)
+	{
+		this.id = HOLYELEMENTRESIST;
+		this.name = "Holy Ele Resist";
+		this.desc = "Raises Holy Element resist (% based on Dex).";
+		this.cubeCost = 4;
+		
+		this.currentSP = currentSP;
+		this.learned = learned;
+		this.equipped = equipped;
+	}
+	
+	public void process(Unit character)
+	{
+		int resistAmt = 20 + 3*character.dex; //TODO: work on this formula?
+		
+		character.elementResistance[Game.ELEMENT_HOLY] += resistAmt; 
+	}
+	
+	public boolean canLearn(Unit character)
+	{
+		return true; //TODO: who can learn? anyone?
+	}
+	
+	public int getCost(Unit character)
+	{
+		return 75;
+	}
+}
+
+class HolyElementAttack extends PassiveSkill
+{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	public HolyElementAttack()
+	{
+		this(0, false, false);
+	}
+	
+	public HolyElementAttack(int currentSP, boolean learned, boolean equipped)
+	{
+		this.id = HOLYELEMENTATTACK;
+		this.name = "Holy Ele Attack";
+		this.desc = "Weapon becomes Holy element (% based on Dex).";
+		this.cubeCost = 6;
+		
+		this.currentSP = currentSP;
+		this.learned = learned;
+		this.equipped = equipped;
+	}
+	
+	public void process(Unit character)
+	{
+		//looks at this in Game.calculateDamage() 
+	}
+	
+	public boolean canLearn(Unit character)
+	{
+		return true; //TODO: who can learn? anyone?
+	}
+	
+	public int getCost(Unit character)
+	{
+		return 90;
 	}
 }

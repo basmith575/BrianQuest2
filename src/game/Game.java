@@ -27,7 +27,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 	 * Game states
 	 */
 	public static final int TITLESCREEN = 0;			//title screen
-	public static final int INTRO = 1;					//introduction to the game
+	public static final int CUTSCENE = 1;				//a cutscene (like new game intro)
 	public static final int MAP = 2;					//not in menu - on map
 	public static final int MAINMENU = 3;				//main menu
 	public static final int STATUSMENU = 4;				//viewing a party member's status
@@ -68,6 +68,9 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 	public static final int STATUSMENUMOREINFO = 39;	//looking at more information in the status menu
 	public static final int SKILLMENUSEL = 40;			//selecting passive or active skills to look at
 	public static final int INNCHOICE = 41;				//choosing Yes or No for an inn
+	public static final int DATASELECT1 = 42;			//New Game or Continue
+	public static final int DATASELECT2 = 43;			//Choose the save file
+	public static final int CONFIRMOVERRIDE = 44;		//Confirm starting a new game over an existing file
 	
 	/**
 	 * Battle states (for drawing units)
@@ -82,16 +85,48 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 	//otherwise, use the current skill ID
 	
 	/**
+	 * Cutscenes
+	 */
+	public static final int CUTSCENE_INTRO = 0;
+	
+	/**
+	 * Statuses
+	 */
+	public static final int NUMSTATUSES = 20;
+	public static final int STATUS_POISON = 0;
+	public static final int STATUS_SILENCE = 1;
+	public static final int STATUS_BLIND = 2;
+	public static final int STATUS_SLEEP = 3;
+	public static final int STATUS_PROTECT = 4;
+	public static final int STATUS_SHELL = 5;
+	public static final int STATUS_HASTE = 6;
+	public static final int STATUS_SLOW = 7;
+	public static final int STATUS_REGEN = 8;
+	public static final int STATUS_BERSERK = 9;
+	public static final int STATUS_DEFEND = 10;
+	public static final int STATUS_ATKUP = 11;
+	public static final int STATUS_EVADE = 12;
+	public static final int STATUS_SHAME = 13;
+	public static final int STATUS_AMP = 14;
+	public static final int STATUS_DEATH = 15;
+	public static final int STATUS_ATKDOWN = 16;
+	public static final int STATUS_GOALKEEPER = 17;
+	public static final int STATUS_OIL = 18;
+	public static final int STATUS_VIRUS = 19;
+	
+	/**
 	 * Elements
 	 */
-	public static final int NUMELEMENTS = 6;
-	public static final int NOELEMENT = -1;
-	public static final int SNACK = 0;
-	public static final int FIRE = 1;
-	public static final int LIGHTNING = 2;
-	public static final int WATER = 3;
-	public static final int EARTH = 4;
-	public static final int POISON = 5;
+	public static final int NUMELEMENTS = 8;
+	public static final int ELEMENT_NONE = -1;
+	public static final int ELEMENT_SNACK = 0;
+	public static final int ELEMENT_FIRE = 1;
+	public static final int ELEMENT_LIGHTNING = 2;
+	public static final int ELEMENT_WATER = 3;
+	public static final int ELEMENT_EARTH = 4;
+	public static final int ELEMENT_POISON = 5;
+	public static final int ELEMENT_DARK = 6;
+	public static final int ELEMENT_HOLY = 7;
 	
 	/**
 	 * Attack animations
@@ -112,9 +147,12 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 	public boolean moveSouth = false;
 	public boolean moveWest = false;
 	
+	public static Data[] data;
+	public static int dataIndex;
+	
 	public static Unit[] party;
 	public Unit placeholderCharacter;
-	public ArrayList<Unit> monsters;
+	public ArrayList<Monster> monsters;
 	
 	//public boolean[] leveledUp;
 	public ArrayList<AfterBattleAlert> afterBattleAlerts;
@@ -135,7 +173,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 
 	static int money;
 	
-	public int direction;
+	public int direction = SOUTH;
 	
 	static int stepsWithoutBattle; //used with "encounter threshold" - guarantee a certain number of steps without battle
 	
@@ -145,8 +183,8 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 	//cached images
 	public static Image tileImage[];
 	public static Image thingImage[];
-	public static Image tileAltImage[];
-	public static Image thingAltImage[];
+	public static ArrayList<Image[]> movingTileImage;
+	public static ArrayList<Image[]> movingThingImage;
 	public static Image mapCharacterImage[][];
 	
 	public static int numFrames;
@@ -178,7 +216,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 	static int songFrame;
 	
 	static float volume = -17;
-	static boolean mute = false;
+	static boolean mute = true; //TODO: false
 
 	static int tileState = 0;
 	static ArrayList<Integer> movingTileList;
@@ -194,12 +232,6 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 	public static ArrayList<Item> inventory = new ArrayList<Item>();
 	public static ArrayList<Item> itemDrops = new ArrayList<Item>();
 	public static ArrayList<Integer> equippableIndexList = new ArrayList<Integer>();
-	
-	/**
-	 * Double buffering
-	 */
-	static Image dbImage;
-	static Graphics dbGraphics;
 
 	static long baseTime = System.currentTimeMillis();
 	static long lastPaintTime = System.currentTimeMillis();
@@ -208,13 +240,21 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 	
 	static boolean inputDisabled = false;
 	
+	static int frameCount; //25 frames per second (arbitrary)
 	static int gameTime;
+	static boolean dataLoaded; //don't want to do certain things in gameLoop until the game is loaded
 
 	static long lastBonk = 0; //don't spam the bonk sound
 	static int sliding = -1; //determines if you're sliding on ice
-	static int steps = 0; //save to backup data every 250 steps
 	
-	public boolean saveOverride = false; //set this to save anywhere, obviously won't be in the actual game
+	public boolean saveOverride = true; //TODO: un-set this
+	
+	public int cutsceneID;
+	public int cutsceneState;
+	public int cutsceneNumStates;
+	public int cutsceneFramesPerState;
+	public int cutsceneCurrentFramesForState;
+	public int cutsceneNextState;
 
 	public void init()
 	{
@@ -280,39 +320,76 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 	                	 {
 	                		 move(WEST);
 	                	 }
-	                	 
-	                	 repaint();
+	                }
+	                
+	                if(state == CUTSCENE)
+	                {
+	                	cutsceneCurrentFramesForState++;
+	                	                		
+                		if(cutsceneCurrentFramesForState > cutsceneFramesPerState)
+                		{
+                			cutsceneCurrentFramesForState = 0;
+                			cutsceneState++;
+                			
+                			if(cutsceneState == cutsceneNumStates) //cutscene over, go to next state
+                			{
+                				setState(cutsceneNextState);
+                				
+                				if(cutsceneNextState == MAP)
+                				{
+                					playMapSong(false);
+                				}
+                			}
+                		}
+	                }
+	                
+	                if(dataLoaded)
+	                {
+	                	try
+	                	{
+		                	frameCount++;
+			                if(frameCount % 25 == 0) //1000 milliseconds have passed
+			                {
+			                	if(gameTime < 359999) //max game time is 99:59:59
+			                	{
+			                		gameTime++; //another second passed
+			                	}
+			                }
+			                
+			                updateTileAndThingTimers();
+	                	}
+	                	catch(Exception e) //if frameCount somehow gets too large... should be impossible, would take 2.7 years, but just to be safe
+	                	{
+	                		frameCount = 0;
+	                	}
+	                	
+	                	repaint();
 	                }
 	            }
 	        }
 	    }.start();
 	}
 	
-	public void tileLoop()
+	public void updateTileAndThingTimers()
 	{
-	    new Thread()
-	    {
-	        public void run()
-	        {
-	            while(true)
-	            {
-	                try
-	                {	                	
-	                    Thread.sleep(1000);
-	                }
-	                catch (InterruptedException e)
-	                {
-	                    e.printStackTrace();
-	                }
-	                
-	                tileState = tileState * -1 + 1;
-	                
-	                gameTime++; //another second passed
-	                
-	                repaint();
-	            }
-	        }
-	    }.start();
+		for(int i=-9; i<10; i++)
+		{
+			for(int j=-7; j<8; j++)
+			{
+				if(curX+i >= 0 && curY+j >= 0 && curX+i < curMap.tile.length && curY+j < curMap.tile[0].length)
+				{
+					if(Tile.hasOwnTimer(curMap.tile[curX+i][curY+j].type))
+					{
+						curMap.tile[curX+i][curY+j].timer++;
+					}
+					
+					if(Thing.hasOwnTimer(curMap.tile[curX+i][curY+j].thing.type))
+					{
+						curMap.tile[curX+i][curY+j].thing.timer++;
+					}
+				}
+			}
+		}
 	}
 	
 	public void walkLoop()
@@ -395,7 +472,6 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
         		for(int i=0; i<threadNumFrames; i++)
   	           	{
         			animationID = i;
-
         			if(i == threadNumFrames-1 && (state == BATTLEEFFECT || state == BATTLERECALCULATE))
         			{
         				setState(BATTLE); //1 frame with no effect between turns
@@ -429,7 +505,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		switch(state)
 		{
 		case TITLESCREEN: return "Title Screen";
-		case INTRO: return "Intro";
+		case CUTSCENE: return "Cutscene";
 		case MAP: return "Map";
 		case MAINMENU: return "Main menu";
 		case STATUSMENU: return "Status menu";
@@ -479,6 +555,8 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		
 		checkOS(); //set OS and FileSeparator before doing any File I/O
 		
+		loadData();
+		
 		setState(TITLESCREEN);
 		
 		party = new Unit[8]; //6 party members, 2 extra space in case 1 in party and 5 in "storage"
@@ -489,7 +567,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		
 		afterBattleAlerts = new ArrayList<AfterBattleAlert>();
 		
-		monsters = new ArrayList<Unit>();
+		monsters = new ArrayList<Monster>();
 		
 		arialBold28 = new Font("Arial",Font.BOLD,28);
 		arialBold20 = new Font("Arial",Font.BOLD,20);
@@ -515,36 +593,63 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		statUpGreen = new Color(105,255,0);
 		darkGray = new Color(70,70,70);
 		
+		movingTileList = Tile.movingTileList();
+		movingThingList = Thing.movingThingList();
+		
 		tileImage = new Image[Tile.NUMTILES];
 		for(int i=0; i<Tile.NUMTILES; i++)
 		{
-			icon = new ImageIcon(getClass().getResource("img/tile/tile" + i + ".PNG"));
-			tileImage[i] = icon.getImage();
+			if(!movingTileList.contains(i))
+			{
+				icon = new ImageIcon(getClass().getResource("img/tile/tile" + i + ".PNG"));
+				tileImage[i] = icon.getImage();
+			}
+			else
+			{
+				tileImage[i] = null;
+			}
 		}
 		
-		thingImage = new Image[Thing.NUMTHINGS+1];
-		for(int i=1; i<Thing.NUMTHINGS+1; i++)
+		thingImage = new Image[Thing.NUMTHINGS];
+		for(int i=0; i<Thing.NUMTHINGS; i++)
 		{
-			icon = new ImageIcon(getClass().getResource("img/thing/mapThing" + i + ".PNG"));
-			thingImage[i] = icon.getImage();
+			if(!movingThingList.contains(i))
+			{
+				icon = new ImageIcon(getClass().getResource("img/thing/thing" + i + ".PNG"));
+				thingImage[i] = icon.getImage();
+			}
+			else
+			{
+				thingImage[i] = null;
+			}
 		}
 
-		movingTileList = Tile.movingTileList();
-		
-		tileAltImage = new Image[movingTileList.size()];
+		movingTileImage = new ArrayList<Image[]>();
 		for(int i=0; i<movingTileList.size(); i++)
 		{
-			icon = new ImageIcon(getClass().getResource("img/tile/tile" + movingTileList.get(i) + "a.PNG"));
-			tileAltImage[i] = icon.getImage();
+			int numFrames = Tile.numAnimationStates(movingTileList.get(i));
+			Image[] altImage = new Image[numFrames];
+			for(int j=0; j<numFrames; j++)
+			{
+				icon = new ImageIcon(getClass().getResource("img/tile/tile" + movingTileList.get(i) + "_" + j + ".PNG"));
+				altImage[j] = icon.getImage();
+			}
+			
+			movingTileImage.add(altImage);
 		}
 		
-		movingThingList = Thing.movingThingList();
-		
-		thingAltImage = new Image[movingThingList.size()];
+		movingThingImage = new ArrayList<Image[]>();
 		for(int i=0; i<movingThingList.size(); i++)
 		{
-			icon = new ImageIcon(getClass().getResource("img/thing/mapThing" + movingThingList.get(i) + "a.PNG"));
-			thingAltImage[i] = icon.getImage();
+			int numFrames = Thing.numAnimationStates(movingThingList.get(i));
+			Image[] altImage = new Image[numFrames];
+			for(int j=0; j<numFrames; j++)
+			{
+				icon = new ImageIcon(getClass().getResource("img/thing/thing" + movingThingList.get(i) + "_" + j + ".PNG"));
+				altImage[j] = icon.getImage();
+			}
+			
+			movingThingImage.add(altImage);
 		}
 		
 		mapCharacterImage = new Image[4][4];
@@ -569,7 +674,22 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		playSong("Nice");
 		
 		gameLoop();
-		tileLoop();
+	}
+	
+	public void startCutscene(int cutscene)
+	{
+		setState(CUTSCENE);
+		
+		cutsceneID = cutscene;
+		cutsceneState = 0;
+		cutsceneCurrentFramesForState = 0;
+		
+		if(cutscene == CUTSCENE_INTRO) //new game
+		{
+			cutsceneNumStates = 4;
+			cutsceneFramesPerState = 25 * 8; //8 seconds per frame
+			cutsceneNextState = MAP;
+		}
 	}
 	
 	public boolean canSave()
@@ -726,18 +846,21 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		new Thread(soundPlayer).start();
 	}
 	
-	public void playSong(String name, boolean saveClipPosition)
+	public void playSong(String song, boolean saveClipPosition)
 	{
-		currentSong = name;
+		currentSong = song;
 		
 		if(!mute)
 		{
 			try
 			{
+				int[] mapSongLoopPoints = getLoopPoints(curMap.song);
+				int[] songLoopPoints = getLoopPoints(song);
+				
 				if(saveClipPosition)
 				{
 					songFrame = clip.getFramePosition();
-					if(songFrame >= getLoopPoints(curMap.song)[1]) songFrame = (songFrame-getLoopPoints(curMap.song)[0])%(getLoopPoints(curMap.song)[1]-getLoopPoints(curMap.song)[0])+getLoopPoints(curMap.song)[0];
+					if(songFrame >= mapSongLoopPoints[1]) songFrame = (songFrame-mapSongLoopPoints[0])%(mapSongLoopPoints[1]-mapSongLoopPoints[0])+mapSongLoopPoints[0];
 				}
 				
 				try
@@ -753,14 +876,14 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					System.out.println("Couldn't stop the clip: " + e.getMessage());
 				}
 				
-				URL url = getClass().getResource("bgm/" + name + ".wav");
+				URL url = getClass().getResource("bgm/" + song + ".wav");
 				AudioInputStream audioIn = AudioSystem.getAudioInputStream(url);
 				
 				clip = AudioSystem.getClip();
 				
 				clip.open(audioIn);
 				
-				clip.setLoopPoints(getLoopPoints(name)[0], getLoopPoints(name)[1]);
+				clip.setLoopPoints(songLoopPoints[0], songLoopPoints[1]);
 				
 				gainControl = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
 				gainControl.setValue(volume);
@@ -769,7 +892,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			}
 			catch(Exception e)
 			{
-				System.out.println("Error playing song " + name + ": " + e.getMessage());
+				System.out.println("Error playing song " + song + ": " + e.getMessage());
 			}
 		}
 	}
@@ -1007,14 +1130,107 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		{
 			drawInnChoice(g);
 		}
+		else if(state == DATASELECT1 || state == DATASELECT2 || state == CONFIRMOVERRIDE)
+		{
+			drawDataSelect(g);
+		}
+		else if(state == CUTSCENE)
+		{
+			drawCutscene(g);
+		}
+	}
+	
+	public void drawCutscene(Graphics g)
+	{
+		draw("scene" + cutsceneID + "_" + cutsceneState,"cutscene",0,0,g);
 	}
 	
 	public void drawTitleScreen(Graphics g)
 	{
 		draw("titleScreen",0,0,g);
+	}
+	
+	public void drawDataSelect(Graphics g)
+	{
+		g.setColor(darkGray);
+		g.fillRect(0,0,850,650);
 		
-		draw("pointer",260,500+50*curIndex(),g);
-	}	
+		g.setColor(Color.BLACK);
+		g.fillRect(100,20,650,45);
+		g.setColor(menuBlue);
+		g.fillRect(102,22,646,41);
+		
+		g.setColor(Color.BLACK);
+		g.setFont(arialBold20);
+		g.drawString("New Game",170,50);
+		g.drawString("Continue",560,50);
+		
+		for(int i=0; i<3; i++)
+		{
+			g.setColor(Color.BLACK);
+			g.fillRect(100,70+183*i,650,185);
+			g.setColor(menuBlue);
+			g.fillRect(102,72+183*i,646,181);
+			
+			if(data[i].dataExists)
+			{
+				for(int j=0; j<3; j++)
+				{
+					if(data[i].party[j].id != Character.NONE)
+					{
+						g.setColor(Color.BLACK);
+						g.fillRect(108+160*j,78+183*i,154,154);
+						draw("port" + data[i].party[j].name,"port",110+160*j,80+183*i,g);
+						
+						g.setFont(arialBold12);
+						g.drawString(data[i].party[j].name,125+160*j,245+183*i);
+						drawStringRightAligned("Lv " + data[i].party[j].level,245+160*j,245+183*i,g);
+					}
+				}
+				
+				g.setFont(arialBold14);
+				g.drawString("Money",595,120+183*i);
+				drawStringRightAligned(""+moneyFormat(data[i].money),730,120+183*i,g);
+				g.drawString("Play time",595,180+183*i);
+				drawStringRightAligned(gameTimeString(data[i].gameTime),730,180+183*i,g);
+			}
+			else
+			{
+				g.setColor(Color.BLACK);
+				g.setFont(arialBold16);
+				g.drawString("Empty",400,180+183*i);
+			}
+		}
+		
+		if(state == DATASELECT1) //Continue or New Game?
+		{
+			draw("pointer","icon",130+390*curIndex(),30,g);
+		}
+		else if(state == DATASELECT2)
+		{
+			draw("pointerSel","icon",130+390*prevIndex(1),30,g);
+			draw("pointer","icon",80,140+183*curIndex(),g);
+		}
+		else if(state == CONFIRMOVERRIDE)
+		{
+			draw("pointerSel","icon",130+390*prevIndex(2),30,g);
+			draw("pointerSel","icon",80,140+183*prevIndex(1),g);
+			
+			g.setColor(Color.BLACK);
+			g.fillRect(200,300,450,80);
+			g.setColor(Color.GRAY);
+			g.fillRect(202,302,446,76);
+			
+			g.setColor(Color.BLACK);
+			g.setFont(arialBold14);
+			g.drawString("When the new game is saved, existing",215,330);
+			g.drawString("data will be overridden. Continue?",215,355);
+			g.drawString("No",580,330);
+			g.drawString("Yes",580,355);
+			
+			draw("pointer","icon",542,315+25*curIndex(),g);
+		}
+	}
 	
 	public void drawWorldMap(Graphics g)
 	{
@@ -1060,7 +1276,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				g.setColor(Color.BLACK);
 				g.setFont(arialBold18);
 				g.drawString(curEvent.inventory[i].name,206,110+32*(i-top));
-				draw(curEvent.inventory[i].getIconString(),170,90+32*(i-top),g);
+				draw(curEvent.inventory[i].getIconString(),"icon",170,90+32*(i-top),g);
 				
 				g.setFont(arialBold14);
 				g.setColor(Color.BLACK);
@@ -1068,8 +1284,8 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				drawStringRightAligned(moneyFormat(curEvent.inventory[i].price),515,110+32*(i-top),g);
 			}
 			
-			if(state == SHOPBUY) draw("pointer",140,86+32*(itemIndex-top),g);
-			else draw("pointerSelected",140,86+32*(itemIndex-top),g);
+			if(state == SHOPBUY) draw("pointer","icon",140,86+32*(itemIndex-top),g);
+			else draw("pointerSel","icon",140,86+32*(itemIndex-top),g);
 			
 			g.setColor(Color.BLACK);
 			g.setFont(arialBold14);
@@ -1117,8 +1333,8 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				g.drawString(""+curIndex(),675,340);
 				g.drawString(moneyFormat(curIndex()*curEvent.inventory[itemIndex].price),750,340);
 				
-				draw("leftArrow",650,330,g);
-				draw("rightArrow",700,330,g);
+				draw("leftArrow","icon",650,330,g);
+				draw("rightArrow","icon",700,330,g);
 			}
 		}
 		else if(state == SHOPSELL || state == SHOPSELL2)
@@ -1146,7 +1362,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				g.setColor(Color.BLACK);
 				g.setFont(arialBold18);
 				g.drawString(inventory.get(i).name,186,110+32*(i-top));
-				draw(inventory.get(i).getIconString(),150,90+32*(i-top),g);
+				draw(inventory.get(i).getIconString(),"icon",150,90+32*(i-top),g);
 				
 				g.setFont(arialBold14);
 				g.setColor(Color.BLACK);
@@ -1155,8 +1371,8 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				drawStringRightAligned(""+inventory.get(i).qty,535,110+32*(i-top),g);
 			}
 			
-			if(state == SHOPSELL) draw("pointer",120,86+32*(itemIndex-top),g);
-			else draw("pointerSelected",120,86+32*(itemIndex-top),g);
+			if(state == SHOPSELL) draw("pointer","icon",120,86+32*(itemIndex-top),g);
+			else draw("pointerSel","icon",120,86+32*(itemIndex-top),g);
 			
 			g.setColor(Color.BLACK);
 			g.setFont(arialBold14);
@@ -1204,8 +1420,8 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				g.drawString(""+curIndex(),675,340);
 				g.drawString(moneyFormat(curIndex()*inventory.get(itemIndex).price/2),750,340);
 				
-				draw("leftArrow",650,330,g);
-				draw("rightArrow",700,330,g);
+				draw("leftArrow","icon",650,330,g);
+				draw("rightArrow","icon",700,330,g);
 			}
 		}
 	}
@@ -1261,7 +1477,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					xPos = boxLeft + 20;
 					yPos = 440;
 				}
-				else if(party[i].id == Character.RYAN)
+				else if(party[i].id == Character.HANK)
 				{
 					xPos = boxLeft + 20 + xOffset;
 					yPos = 440;
@@ -1288,13 +1504,13 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		yPos = 500;
 		for(int i=0; i<numActiveSkills; i++)
 		{
-			draw("iconActive",boxLeft+20,yPos-20,g);
+			draw("iconActive","icon",boxLeft+20,yPos-20,g);
 			g.drawString(equip.activeSkills.get(i).action.name,boxLeft+45,yPos);
 			yPos += 25;
 		}
 		for(int i=0; i<numPassiveSkills; i++)
 		{
-			draw("iconPassive",boxLeft+20,yPos-20,g);
+			draw("iconPassive","icon",boxLeft+20,yPos-20,g);
 			g.drawString(equip.passiveSkills.get(i).name,boxLeft+45,yPos);
 			yPos += 25;
 		}
@@ -1329,7 +1545,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 	{
 		if(battleAction != null)
 		{
-			if(battleAction.action == Action.KAGESHADOWS)
+			if(battleAction.action.id == Action.KAGESHADOWS)
 			{
 				draw("battleBackground_Kage","battleBackground",0,0,g);
 				return;
@@ -1338,14 +1554,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		
 		int backgroundID = curTile().type;
 		
-		try
-		{
-			draw("battleBackground" + "_" + backgroundID,"battleBackground",0,0,g);
-		}
-		catch(Exception e)
-		{
-			draw("battleBackground_0","battleBackground",0,0,g);
-		}
+		draw("battleBackground" + "_" + backgroundID,"battleBackground",0,0,g);
 	}
 	
 	public void drawBattle(Graphics g)
@@ -1504,11 +1713,11 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				
 				if(prevState == BATTLEFLED && party[i].hp > 0)
 				{
-					draw("port" + party[i].name + "Fled",x,70,g);
+					draw("port" + party[i].name + "Fled","port",x,70,g);
 				}
-				else draw("port" + party[i].name,x,70,g);
+				else draw("port" + party[i].name,"port",x,70,g);
 				
-				if(party[i].hp == 0) draw("dead",x,70,g);
+				if(party[i].hp == 0) draw("dead","port",x,70,g);
 				
 				g.setFont(arialBold18);
 				g.setColor(Color.BLACK);
@@ -1563,7 +1772,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			
 			for(int i=0; i<itemDrops.size(); i++)
 			{
-				draw(itemDrops.get(i).getIconString(),455,440+30*i,g);
+				draw(itemDrops.get(i).getIconString(),"icon",455,440+30*i,g);
 				g.drawString("Found " + itemDrops.get(i).name + " (" + itemDrops.get(i).qty + ").",485,460+30*i);
 			}
 		}
@@ -1574,14 +1783,18 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		draw("gameOver",0,0,g);
 	}
 	
-	public void drawDamageString(String displayString, int x, int y, Graphics g)
+	public int drawDamageString(String displayString, int x, int y, Graphics g)
 	{
-		int damageFrame = Action.actionFromID(battleAction.action).damageFrame;
+		int damageFrame = Action.actionFromID(battleAction.action.id).damageFrame;
 		if(animationID >= damageFrame && animationID < damageFrame+19)
 		{
 			y += getDamageStringOffset(animationID-damageFrame);
 			g.drawString(displayString,x,y);
+			
+			return y;
 		}
+		
+		return -1;
 	}
 	
 	public void drawBattleEffect(Graphics g)
@@ -1591,7 +1804,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		
 		if(battleAction == null) return; //race condition?
 		
-		if(battleAction.action == Action.FLEE) //no targets/damages/effects to show
+		if(battleAction.action.id == Action.FLEE) //no targets/damages/effects to show
 		{
 			String battleMessage = battleAction.user.displayName() + " attempts to flee like a coward, but fails.";
 			
@@ -1605,6 +1818,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			int[] coord;
 			int coordXOffset;
 			
+			boolean targetIsMonster = false;
 			if(battleAction.targets.get(i) < 3)
 			{
 				coord = getPlayerCoordinates(battleAction.targets.get(i));
@@ -1614,6 +1828,8 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			{
 				coord = getMonsterCoordinates(battleAction.targets.get(i) - 3);
 				coordXOffset = -20;
+				
+				targetIsMonster = true;
 			}
 			
 			ArrayList<Integer> valuesToDisplay = new ArrayList<Integer>(); //this is really dumb, but I don't know a better way to handle it
@@ -1623,6 +1839,8 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			/**
 			 * Drawing damage/healing/MP
 			 */
+			//TODO: damage currently overlaps a bit with animations and status icons, so shift things around
+			
 			g.setFont(arialBold20);
 			for(int j=0; j<valuesToDisplay.size(); j++)
 			{
@@ -1632,22 +1850,37 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					int value = battleAction.values.get(index);
 					String displayString;
 					
-					if(battleAction.action == Action.MURDER)
+					if(battleAction.action.id == Action.MURDER)
 					{
 						g.setColor(Color.WHITE);
 						
 						if(value == -1) //immune
 						{
 							displayString = "Immune";
+							
+							if(targetIsMonster)
+							{
+								coordXOffset -= 80;
+							}
 						}
 						else if(value == 0)
 						{
 							displayString = "Miss";
+							
+							if(targetIsMonster)
+							{
+								coordXOffset -= 60;
+							}
 						}
 						else
 						{
 							g.setColor(Color.RED);
 							displayString = "Murder";
+							
+							if(targetIsMonster)
+							{
+								coordXOffset -= 80;
+							}
 						}
 					}
 					else
@@ -1662,27 +1895,58 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 						}
 						
 						String damageDisplay = "" + value;
-						if(battleAction.crit.size() > index) //crit array may be empty
-						{
-							if(battleAction.crit.get(index))
-							{
-								damageDisplay += " !!";
-							}
-						}
 						
 						if(battleAction.mp.get(index) == true) g.setColor(mpBlue);
 						else if(value >= 0) g.setColor(Color.WHITE);
 						else g.setColor(hpGreen);
 						
-						if(value < 0) displayString = ""+value*-1;
-						else if(value > 0) displayString = damageDisplay;
-						else if(miss) displayString = "Miss";
-						else displayString = "Immune";
+						if(value < 0)
+						{
+							displayString = ""+value*-1;
+						}
+						else if(value > 0)
+						{
+							displayString = damageDisplay;
+						}
+						else if(miss)
+						{
+							displayString = "Miss";
+							
+							if(targetIsMonster)
+							{
+								coordXOffset -= 60;
+							}
+						}
+						else
+						{
+							displayString = "Immune";
+							
+							if(targetIsMonster)
+							{
+								coordXOffset -= 80;
+							}
+						}
 					}
 					
 					int yOffset = 0;
 					if(valuesToDisplay.size() == 2 && j == 0) yOffset = -50;
-					drawDamageString(displayString,coord[0]+coordXOffset,coord[1]+100+yOffset,g);
+					int y = drawDamageString(displayString,coord[0]+coordXOffset,coord[1]+100+yOffset,g);
+					
+					if(battleAction.crit.size() > index) //crit array may be empty
+					{
+						if(battleAction.crit.get(index))
+						{
+							g.setColor(Color.ORANGE);
+							if(targetIsMonster)
+							{
+								g.drawString("Critical!",coord[0]+coordXOffset-50,y-30);
+							}
+							else
+							{
+								g.drawString("Critical!",coord[0]+coordXOffset,y-30);
+							}
+						}
+					}
 				}
 				else if(battleAction.miss.size() > 0) //status move missed
 				{
@@ -1699,15 +1963,15 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			
 			String battleMessage = "";
 			
-			if(animationID > Action.actionFromID(battleAction.action).numFrames-2) animationID = Action.actionFromID(battleAction.action).numFrames-2; //race condition in animationLoop?
-			int animationMap = Action.animationMap(battleAction.action)[animationID];
-			int xOffset = Action.xOffset(battleAction.action)[animationID];
-			int yOffset = Action.yOffset(battleAction.action)[animationID];
+			//if(animationID > Action.actionFromID(battleAction.action.id).numFrames-2) animationID = Action.actionFromID(battleAction.action.id).numFrames-2; //race condition in animationLoop?
+			int animationState = Action.animationState(battleAction.action.id, animationID);
+			int xOffset = Action.xOffsetState(battleAction.action.id, animationID);
+			int yOffset = Action.yOffsetState(battleAction.action.id, animationID);
 			
 			//adjust for image height/width
-			int actionImageWidth = Action.actionFromID(battleAction.action).imageWidth;
+			int actionImageWidth = Action.actionFromID(battleAction.action.id).imageWidth;
 			if(actionImageWidth == 0) actionImageWidth = 125;
-			int actionImageHeight = Action.actionFromID(battleAction.action).imageHeight;
+			int actionImageHeight = Action.actionFromID(battleAction.action.id).imageHeight;
 			if(actionImageHeight == 0) actionImageHeight = 125;
 			xOffset += (getUnitFromTargetIndex(battleAction.targets.get(i)).imageWidth-actionImageWidth)/2;
 			yOffset += (getUnitFromTargetIndex(battleAction.targets.get(i)).imageHeight-actionImageHeight)/2;
@@ -1717,7 +1981,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			/**
 			 * Attack
 			 */
-			if(battleAction.action == Action.ATTACK)
+			if(battleAction.action.id == Action.ATTACK)
 			{
 				String attackAnimation = "";
 				if(battleAction.user.unitType == Unit.MONSTER)
@@ -1736,228 +2000,20 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					}
 				}
 				
-				draw(attackAnimation + "_" + animationMap,"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
+				draw(attackAnimation + "_" + animationState,"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
 			}
-			
-			/**
-			 * Brian
-			 */
-			else if(battleAction.action == Action.BRIANPUNCH)
-			{
-				draw("brianPunch_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			else if(battleAction.action == Action.CHEEZITBLAST)
-			{
-				draw("cheezItBlast_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			else if(battleAction.action == Action.MTNDEWWAVE)
-			{
-				draw("mtnDewWave_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			else if(battleAction.action == Action.GOTTAGOFAST || battleAction.action == Action.GOTTAGOFASTER)
-			{
-				draw("gottaGoFast_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			else if(battleAction.action == Action.COOLRANCHLASER)
-			{
-				draw("coolRanchLaser_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset-50,coord[1]+yOffset,g);
-			}
-			else if(battleAction.action == Action.MURDER || battleAction.action == Action.MASSMURDER)
-			{
-				draw("murder_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset-50,coord[1]+yOffset,g);
-			}
-			else if(battleAction.action == Action.BRIANSMASH)
-			{
-				draw("brianPunch_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g); //TODO: different animation
-			}
-			else if(battleAction.action == Action.FLAVOREXPLOSION)
-			{
-				draw("flavorExplosion_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			
-			/**
-			 * Alex
-			 */
-			else if(battleAction.action == Action.BARF || battleAction.action == Action.VOMITERUPTION)
-			{
-				draw("barf_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			else if(battleAction.action == Action.FLAIL)
-			{
-				draw("hit_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			else if(battleAction.action == Action.ANNOY)
-			{
-				draw("annoy_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			else if(battleAction.action == Action.COWER)
-			{
-				draw("cower_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			else if(battleAction.action == Action.SHRIEK)
-			{
-				draw("shriek_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			else if(battleAction.action == Action.EATPOPTART)
-			{
-				draw("item0_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			else if(battleAction.action == Action.KAMIKAZE)
-			{
-				draw("kamikaze_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			else if(battleAction.action == Action.SUMMONTRAINS)
-			{
-				draw("summonTrains_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			
-			/**
-			 * Ryan
-			 */
-			else if(battleAction.action == Action.BLESSINGOFARINO)
-			{
-				draw("blessingOfArino_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+50+xOffset,coord[1]-30+yOffset,g);
-			}
-			else if(battleAction.action == Action.SILLYDANCE)
-			{
-				draw("sillyDance_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			else if(battleAction.action == Action.BAJABLAST)
-			{
-				draw("bajaBlast_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			else if(battleAction.action == Action.BLESSINGOFMIKU)
-			{
-				draw("blessingOfMiku_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+50+xOffset,coord[1]-30+yOffset,g);
-			}
-			else if(battleAction.action == Action.RADICALRIFF)
-			{
-				draw("radicalRiff_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			else if(battleAction.action == Action.BLUESHIELD || battleAction.action == Action.BLUEBARRIER)
-			{
-				draw("blueShield_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			else if(battleAction.action == Action.AMP)
-			{
-				//draw("sillyDance_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g); TODO
-			}
-			else if(battleAction.action == Action.MYSTERIOUSMELODY)
-			{
-				draw("mysteriousMelody_" + battleAction.element + "_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			else if(battleAction.action == Action.CHIPTUNEOFLIFE)
-			{
-				draw("chiptuneOfLife_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			
-			/**
-			 * Michael
-			 */
-			else if(battleAction.action == Action.SHURIKEN)
-			{
-				draw("shuriken_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			else if(battleAction.action == Action.KAGESHADOWS)
-			{
-				draw("kageShadows_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			else if(battleAction.action == Action.DEFENDHONOR || battleAction.action == Action.HONORFORALL)
-			{
-				draw("defendHonor_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			else if(battleAction.action == Action.NINJUTSUSLICE)
-			{
-				draw("slice_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			else if(battleAction.action == Action.SAMURAISLASH)
-			{
-				draw("slice_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			else if(battleAction.action == Action.BUSHIDOBLADE)
-			{
-				draw("slice_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			else if(battleAction.action == Action.MURAMASAMARA)
-			{
-				draw("slice_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			else if(battleAction.action == Action.INFLICTSHAME)
-			{
-				draw("inflictShame_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			
-			/**
-			 * Kitten
-			 */
-			else if(battleAction.action == Action.FIRE)
-			{
-				draw("fire_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			else if(battleAction.action == Action.BIGFIRE)
-			{
-				draw("fire_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g); //TODO: big fire image
-			}
-			else if(battleAction.action == Action.PURR)
-			{
-				//draw("lightningBolt_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g); TODO
-			}
-			else if(battleAction.action == Action.CATNAP)
-			{
-				draw("catNap_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			else if(battleAction.action == Action.LIGHTNINGBOLT)
-			{
-				draw("lightningBolt_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			else if(battleAction.action == Action.LIGHTNINGSTORM)
-			{
-				draw("lightningBolt_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g); //TODO: lightning storm image
-			}
-			else if(battleAction.action == Action.DEVOUR)
-			{
-				draw("devour_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			else if(battleAction.action == Action.STEAL)
-			{
-				//draw("lightningBolt_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g); TODO
-			}
-			else if(battleAction.action == Action.EARTHSPIKE) //TODO: different image for this
-			{
-				draw("earthquake_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			else if(battleAction.action == Action.EARTHQUAKE)
-			{
-				draw("earthquake_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			else if(battleAction.action == Action.CATSCRATCH)
-			{
-				draw("catScratch_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			
-			/**
-			 * Item
-			 */
-			else if(battleAction.action == Action.HPITEM || battleAction.action == Action.MPITEM || battleAction.action == Action.REVIVEITEM)
+			else if(battleAction.action.id == Action.HPITEM || battleAction.action.id == Action.MPITEM || battleAction.action.id == Action.REVIVEITEM)
 			{
 				Item usedItem = battleAction.item;
 				
-				draw("item" + usedItem.id + "_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
+				draw("item" + usedItem.id + "_" + animationState,"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
+			}
+			else if(!Action.actionFromID(battleAction.action.id).animationPrefix.equals(""))
+			{
+				draw(Action.actionFromID(battleAction.action.id).animationPrefix + "_" + animationState, "battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
 			}
 			
-			/**
-			 * Poison/regen 
-			 */
-			else if(battleAction.action == Action.POISON)
-			{
-				draw("poison_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			else if(battleAction.action == Action.REGEN)
-			{
-				draw("regen_" + Action.animationMap(battleAction.action)[animationID],"battleEffect",coord[0]+xOffset,coord[1]+yOffset,g);
-			}
-			
-			if(battleAction.action == Action.STEAL)
+			if(battleAction.action.id == Action.STEAL)
 			{
 				if(battleAction.stealOutcome == 1)
 				{
@@ -1976,9 +2032,9 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			{
 				battleMessage = battleAction.item.name;
 			}
-			else if(battleAction.action >= 10) //skills are 10+, don't show a message for stuff like attack/poison/flee
+			else if(battleAction.action.id >= 10) //skills are 10+, don't show a message for stuff like attack/poison/flee
 			{
-				battleMessage = Action.actionFromID(battleAction.action).name;
+				battleMessage = Action.actionFromID(battleAction.action.id).name;
 			}
 			
 			if(!battleMessage.equals("")) drawBattleMessage(battleMessage,g);
@@ -2023,7 +2079,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 	
 	public static int calculateDamage(Unit attack, int action, Unit target, ArrayList<Boolean> crit, ArrayList<Boolean> miss)
 	{
-		return calculateDamage(attack,action,target,crit,miss,NOELEMENT);
+		return calculateDamage(attack,action,target,crit,miss,ELEMENT_NONE);
 	}
 	
 	public static int calculateDamage(Unit attack, int action, Unit target, ArrayList<Boolean> crit, ArrayList<Boolean> miss, int element)
@@ -2040,16 +2096,11 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		
 		if(action == Action.POISON)
 		{
-			//shouldn't care about resistance for poison status damage
-			//if(target.elementResistance[POISON] == 100) return 0; 
-			
 			double ddmg = attack.maxHp * 0.05;
 			ddmg = randomize(ddmg,85,115); //randomize
 			
 			value = (int) ddmg;
 			if(value < 1) value = 1;
-			
-			//ddmg -= ddmg*(target.elementResistance[POISON]/100.0);
 			
 			return value;
 		}
@@ -2069,7 +2120,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			}
 		}
 		
-		if(actionObj.element != NOELEMENT) //TODO: for ghosts, can return 0 if the attack is physical
+		if(actionObj.element != ELEMENT_NONE) //TODO: for ghosts, can return 0 if the attack is physical
 		{
 			if(target.elementResistance[actionObj.element] == 100) return 0;
 		}
@@ -2079,74 +2130,42 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		
 		if(actionObj.damageType == Action.PHYSICAL)
 		{
-			if(attack.status[Unit.BERSERK] > 0)
+			if(attack.status[STATUS_BERSERK] > 0)
 			{
 				ddmg *= 1.25;
 			}
 			
-			if(attack.status[Unit.ATKUP] > 0)
+			if(attack.status[STATUS_ATKUP] > 0)
 			{
 				ddmg *= 1.5;
 			}
 			
-			if(target.status[Unit.PROTECT] > 0)
+			if(attack.status[STATUS_ATKDOWN] > 0)
+			{
+				ddmg *= 0.5;
+			}
+			
+			if(target.status[STATUS_PROTECT] > 0)
 			{
 				ddmg /= 2.0;
 			}
 			
-			if(target.status[Unit.DEFEND] == 1)
+			if(target.status[STATUS_DEFEND] == 1)
 			{
 				ddmg /= 2.0;
 			}
 		}
 		else if(actionObj.damageType == Action.MAGICAL)
 		{
-			if(target.status[Unit.SHELL] > 0)
+			if(target.status[STATUS_SHELL] > 0)
 			{
 				ddmg /= 2.0;
 			}
 			
-			if(target.status[Unit.DEFEND] == 1)
+			if(target.status[STATUS_DEFEND] == 1)
 			{
 				ddmg /= 2.0;
 			}
-		}
-		
-		if(actionObj.element != NOELEMENT) //attack is 100% one element
-		{
-			ddmg -= ddmg*(target.elementResistance[actionObj.element]/100.0);
-			if(ddmg < 0 && ddmg > -1) ddmg = -1;
-		}
-		else if(actionObj.attacksWithWeapon) //may need to account for partial elemental attacks
-		{
-			int percentElemental = 20 + 3*attack.dex; //TODO: work on this formula
-			
-			if(attack.hasEquippedPassiveSkill(PassiveSkill.SNACKELEMENTATTACK))
-			{				
-				ddmg = ddmg*(percentElemental/100.0)*(1.0 - target.elementResistance[SNACK]) + ddmg*(1.0 - percentElemental/100.0);
-			}
-			else if(attack.hasEquippedPassiveSkill(PassiveSkill.EARTHELEMENTATTACK))
-			{
-				ddmg = ddmg*(percentElemental/100.0)*(1.0 - target.elementResistance[EARTH]) + ddmg*(1.0 - percentElemental/100.0);
-			}
-			else if(attack.hasEquippedPassiveSkill(PassiveSkill.WATERELEMENTATTACK))
-			{
-				ddmg = ddmg*(percentElemental/100.0)*(1.0 - target.elementResistance[WATER]) + ddmg*(1.0 - percentElemental/100.0);
-			}
-			else if(attack.hasEquippedPassiveSkill(PassiveSkill.FIREELEMENTATTACK))
-			{
-				ddmg = ddmg*(percentElemental/100.0)*(1.0 - target.elementResistance[FIRE]) + ddmg*(1.0 - percentElemental/100.0);
-			}
-			else if(attack.hasEquippedPassiveSkill(PassiveSkill.POISONELEMENTATTACK))
-			{
-				ddmg = ddmg*(percentElemental/100.0)*(1.0 - target.elementResistance[POISON]) + ddmg*(1.0 - percentElemental/100.0);
-			}
-			else if(attack.hasEquippedPassiveSkill(PassiveSkill.LIGHTNINGELEMENTATTACK))
-			{
-				ddmg = ddmg*(percentElemental/100.0)*(1.0 - target.elementResistance[LIGHTNING]) + ddmg*(1.0 - percentElemental/100.0);
-			}
-			
-			//TODO: would also want to handle elemental weapons (if they exist)
 		}
 		
 		if(action == Action.ATTACK)
@@ -2211,8 +2230,76 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			ddmg *= dmgMod;
 		}
 		
+		if(ddmg < 1)
+		{
+			ddmg = 1;
+		}
+		
+		/*
+		 * Handle elements last since we need to know beforehand if the value was negative, positive, etc.
+		 */
+		
+		if(actionObj.element != ELEMENT_NONE) //attack is 100% one element
+		{
+			ddmg -= ddmg*(target.elementResistance[actionObj.element]/100.0);
+			
+			if(actionObj.element == ELEMENT_FIRE && target.status[STATUS_OIL] > 0)
+			{
+				ddmg *= 2.0;
+			}
+		}
+		else if(actionObj.attacksWithWeapon) //may need to account for partial elemental attacks
+		{
+			int percentElemental = 20 + 3*attack.dex; //TODO: work on this formula
+			int oilMultiplier = 0;
+			
+			if(attack.hasEquippedPassiveSkill(PassiveSkill.SNACKELEMENTATTACK))
+			{				
+				ddmg = ddmg*(percentElemental/100.0)*(1.0 - target.elementResistance[ELEMENT_SNACK]) + ddmg*(1.0 - percentElemental/100.0);
+			}
+			else if(attack.hasEquippedPassiveSkill(PassiveSkill.EARTHELEMENTATTACK))
+			{
+				ddmg = ddmg*(percentElemental/100.0)*(1.0 - target.elementResistance[ELEMENT_EARTH]) + ddmg*(1.0 - percentElemental/100.0);
+			}
+			else if(attack.hasEquippedPassiveSkill(PassiveSkill.WATERELEMENTATTACK))
+			{
+				ddmg = ddmg*(percentElemental/100.0)*(1.0 - target.elementResistance[ELEMENT_WATER]) + ddmg*(1.0 - percentElemental/100.0);
+			}
+			else if(attack.hasEquippedPassiveSkill(PassiveSkill.FIREELEMENTATTACK))
+			{
+				ddmg = ddmg*(percentElemental/100.0)*(1.0 - target.elementResistance[ELEMENT_FIRE]) + ddmg*(1.0 - percentElemental/100.0);
+				oilMultiplier = percentElemental;
+			}
+			else if(attack.hasEquippedPassiveSkill(PassiveSkill.POISONELEMENTATTACK))
+			{
+				ddmg = ddmg*(percentElemental/100.0)*(1.0 - target.elementResistance[ELEMENT_POISON]) + ddmg*(1.0 - percentElemental/100.0);
+			}
+			else if(attack.hasEquippedPassiveSkill(PassiveSkill.LIGHTNINGELEMENTATTACK))
+			{
+				ddmg = ddmg*(percentElemental/100.0)*(1.0 - target.elementResistance[ELEMENT_LIGHTNING]) + ddmg*(1.0 - percentElemental/100.0);
+			}
+			else if(attack.hasEquippedPassiveSkill(PassiveSkill.DARKELEMENTATTACK))
+			{
+				ddmg = ddmg*(percentElemental/100.0)*(1.0 - target.elementResistance[ELEMENT_DARK]) + ddmg*(1.0 - percentElemental/100.0);
+			}
+			else if(attack.hasEquippedPassiveSkill(PassiveSkill.HOLYELEMENTATTACK))
+			{
+				ddmg = ddmg*(percentElemental/100.0)*(1.0 - target.elementResistance[ELEMENT_HOLY]) + ddmg*(1.0 - percentElemental/100.0);
+			}
+			
+			//TODO: would also want to handle elemental weapons (if they exist)
+			//could impact what percentage of the attack is Fire elemental in the case of Oil, so modify oilMultiplier
+			
+			if(oilMultiplier != 0)
+			{
+				ddmg = ddmg*(1.0 + 1.0*(percentElemental/100.0));
+			}
+		}
+		
+		if(ddmg < 0 && ddmg > -1) ddmg = -1;
+		else if(ddmg >= 0 && ddmg < 1) ddmg = 1;
+		
 		value = (int) ddmg;
-		if(value < 1) value = 1;
 		
 		return value;
 	}
@@ -2324,7 +2411,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		
 		if(battleAction != null && state != BATTLE)
 		{
-			if(battleAction.user.unitType == Unit.CHARACTER && battleAction.action != Action.POISON && battleAction.action != Action.REGEN)
+			if(battleAction.user.unitType == Unit.CHARACTER && battleAction.action.id != Action.POISON && battleAction.action.id != Action.REGEN)
 			{
 				if(battleAction.user.getBattleIndex() == party[index].getBattleIndex())
 				{
@@ -2354,7 +2441,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		
 		if(battleAction != null && state != BATTLE)
 		{
-			if(battleAction.user.unitType == Unit.MONSTER && battleAction.action != Action.POISON && battleAction.action != Action.REGEN)
+			if(battleAction.user.unitType == Unit.MONSTER && battleAction.action.id != Action.POISON && battleAction.action.id != Action.REGEN)
 			{
 				if(battleAction.user.getBattleIndex() == monsters.get(index).getBattleIndex())
 				{
@@ -2379,6 +2466,8 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 	
 	public void drawBattleTarget(Graphics g)
 	{
+		//Note: using just ifs rather than if/else since we want to consider the ALLUNITS case (add both enemies and allies)
+		
 		int targetType = selectedAction.targetType;
 		
 		if(targetType == Action.ONEENEMY || (targetType == Action.ONEUNIT && curIndex() >= 3))
@@ -2391,9 +2480,10 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			coord[0] -= 50;
 			coord[1] += monsters.get(index).imageHeight/2;
 			
-			draw("pointer",coord[0],coord[1],g);
+			draw("pointer","icon",coord[0],coord[1],g);
 		}
-		else if(targetType == Action.ALLENEMIES)
+		
+		if(targetType == Action.ALLENEMIES || targetType == Action.ALLUNITS)
 		{
 			for(int i=0; i<monsters.size(); i++)
 			{
@@ -2403,20 +2493,22 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					coord[0] -= 50;
 					coord[1] += monsters.get(i).imageHeight/2;
 					
-					draw("pointer",coord[0],coord[1],g);
+					draw("pointer","icon",coord[0],coord[1],g);
 				}
 			}
 		}
-		else if(targetType == Action.ONEALLY || targetType == Action.SELF || (targetType == Action.ONEUNIT && curIndex() < 3))
+		
+		if(targetType == Action.ONEALLY || targetType == Action.SELF || (targetType == Action.ONEUNIT && curIndex() < 3))
 		{
 			int[] coord = getPlayerCoordinates(curIndex());
 			coord[0] += -40;
 			coord[1] += 75;
 			
-			draw("pointer",coord[0],coord[1],g);
+			draw("pointer","icon",coord[0],coord[1],g);
 			
 		}
-		else if(targetType == Action.ALLALLIES)
+		
+		if(targetType == Action.ALLALLIES || targetType == Action.ALLUNITS)
 		{
 			for(int i=0; i<3; i++)
 			{
@@ -2426,7 +2518,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					coord[0] += - 40;
 					coord[1] += 75;
 					
-					draw("pointer",coord[0],coord[1],g);
+					draw("pointer","icon",coord[0],coord[1],g);
 				}
 			}
 		}
@@ -2447,6 +2539,24 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		}
 	}
 	
+	public boolean preventFlee()
+	{
+		if(this.monsters == null)
+		{
+			return false;
+		}
+		
+		for(int i=0; i<monsters.size(); i++)
+		{
+			if(monsters.get(i).preventFlee)
+			{
+				return true;
+			}
+		}
+		
+		return false;
+	}
+	
 	public void drawBattleChoice(Graphics g)
 	{
 		int coord[] = getPlayerCoordinates(currentUnit.index);
@@ -2462,12 +2572,40 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		if(state == BATTLECHOICE || (state == BATTLETARGET && prevState == BATTLECHOICE))
 		{
 			g.setColor(Color.WHITE);
+			g.setFont(arialBold16);
 			g.drawString("Attack",330,550);
+			
+			if(currentUnit.getLearnedActiveSkills().size() > 0)
+			{
+				g.setColor(Color.WHITE);
+			}
+			else
+			{
+				g.setColor(Color.GRAY);
+			}
 			g.drawString(currentUnit.getSkillString(),330,577);
+			
+			if(inventory.size() > 0)
+			{
+				g.setColor(Color.WHITE);
+			}
+			else
+			{
+				g.setColor(Color.GRAY);
+			}
 			g.drawString("Item",330,604);
+			
+			if(!preventFlee())
+			{
+				g.setColor(Color.WHITE);
+			}
+			else
+			{
+				g.setColor(Color.GRAY);
+			}
 			g.drawString("Flee",330,631);
 			
-			draw("pointer",290,530+27*choiceIndex,g);
+			draw("pointer","icon",290,530+27*choiceIndex,g);
 		}
 		else if(state == BATTLESELECTSKILL || (state == BATTLETARGET && prevState == BATTLESELECTSKILL))
 		{
@@ -2478,8 +2616,9 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			
 			for(int i=top; i<=bottom; i++)
 			{
-				if(currentUnit.canUseSkill(currentUnit.getLearnedActiveSkills().get(i).action)) g.setColor(Color.WHITE);
+				if(currentUnit.canUseAction(currentUnit.getLearnedActiveSkills().get(i).action)) g.setColor(Color.WHITE);
 				else g.setColor(Color.GRAY);
+				g.setFont(arialBold16);
 				
 				g.drawString(currentUnit.getLearnedActiveSkills().get(i).action.name,330,550+27*(i-top));
 				drawStringRightAligned(currentUnit.getLearnedActiveSkills().get(i).action.getMPCost(currentUnit) + " MP",535,550+27*(i-top),g);
@@ -2500,11 +2639,11 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			
 			if(state == BATTLETARGET)
 			{
-				draw("pointerSelected",290,530+27*cursorAlign,g);
+				draw("pointerSel","icon",290,530+27*cursorAlign,g);
 			}
 			else
 			{
-				draw("pointer",290,530+27*cursorAlign,g);
+				draw("pointer","icon",290,530+27*cursorAlign,g);
 			}
 		}
 		else if(state == BATTLESELECTITEM || (state == BATTLETARGET && prevState == BATTLESELECTITEM))
@@ -2515,10 +2654,11 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			int bottom = Math.min(top+3,numItems-1);
 			
 			g.setColor(Color.WHITE);
+			g.setFont(arialBold16);
 			
 			for(int i=top; i<=bottom; i++)
 			{
-				draw(inventory.get(i).getIconString(),330,530+27*(i-top),g);
+				draw(inventory.get(i).getIconString(),"icon",330,530+27*(i-top),g);
 				g.drawString(inventory.get(i).name,362,550+27*(i-top));
 				drawStringRightAligned(""+inventory.get(i).qty,535,550+27*(i-top),g);
 			}
@@ -2538,20 +2678,20 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			
 			if(state == BATTLETARGET)
 			{
-				draw("pointerSelected",290,530+27*cursorAlign,g);
+				draw("pointerSel","icon",290,530+27*cursorAlign,g);
 			}
 			else
 			{
-				draw("pointer",290,530+27*cursorAlign,g);
+				draw("pointer","icon",290,530+27*cursorAlign,g);
 			}
 		}
 		
-		draw("battleCurrentUnit",x+35,y-20,g);
+		draw("battleCurrentUnit","icon",x+35,y-20,g);
 	}
 	
 	public void drawBattleCharacter(Unit character, int animation, Graphics g)
 	{
-		if(animation == NORMAL && character.status[Unit.SLEEP] > 0)
+		if(animation == NORMAL && character.status[STATUS_SLEEP] > 0)
 		{
 			animation = ASLEEP;
 		}
@@ -2567,7 +2707,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		{
 			animation = DEAD;
 		}
-		else if(character.status[Unit.DEFEND] > 0) //defend animation should override others (like damaged)
+		else if(character.status[STATUS_DEFEND] > 0) //defend animation should override others (like damaged)
 		{
 			animation = DEFENDING;
 		}
@@ -2609,7 +2749,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 	
 	public void drawBattleMonster(Unit monster, int animation, Graphics g)
 	{
-		if(animation == NORMAL && monster.status[Unit.SLEEP] > 0)
+		if(animation == NORMAL && monster.status[STATUS_SLEEP] > 0)
 		{
 			animation = ASLEEP;
 		}
@@ -2640,7 +2780,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		ArrayList<Integer> statusList = new ArrayList<Integer>();
 		for(int i=0; i<unit.status.length; i++)
 		{
-			if(i == Unit.DEFEND) continue; //don't draw an icon for Defend
+			if(i == STATUS_DEFEND) continue; //don't draw an icon for Defend
 			
 			if(unit.status[i] != 0) //also need to consider negatives for "flags"
 			{
@@ -2650,7 +2790,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		
 		for(int i=0; i<statusList.size(); i++)
 		{
-			draw("iconStatus" + statusList.get(i),x+100+25*(i%2),y+25*(i/2),g);
+			draw("iconStatus" + statusList.get(i),"icon",x+100+25*(i%2),y+25*(i/2),g);
 		}
 	}
 	
@@ -2659,7 +2799,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		ArrayList<Integer> statusList = new ArrayList<Integer>();
 		for(int i=0; i<unit.status.length; i++)
 		{
-			if(i == Unit.DEFEND) continue; //don't draw an icon for Defend
+			if(i == STATUS_DEFEND) continue; //don't draw an icon for Defend
 			
 			if(unit.status[i] != 0)
 			{
@@ -2669,7 +2809,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		
 		for(int i=0; i<statusList.size(); i++)
 		{
-			draw("iconStatus" + statusList.get(i),x-25-25*(i%2),y+25*(i/2),g);
+			draw("iconStatus" + statusList.get(i),"icon",x-25-25*(i%2),y+25*(i/2),g);
 		}
 	}
 	
@@ -2690,7 +2830,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			g.setColor(Color.BLACK);
 			g.setFont(arialBold18);
 			g.drawString(inventory.get(i).name,280,110+32*(i-top));
-			draw(inventory.get(i).getIconString(),240,90+32*(i-top),g);
+			draw(inventory.get(i).getIconString(),"icon",240,90+32*(i-top),g);
 			
 			g.setFont(arialBold14);
 			g.setColor(Color.BLACK);
@@ -2698,13 +2838,13 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			
 			if(state == INVENTORYREARRANGE && i == prevIndex(1))
 			{
-				draw("pointerSelected",210,90+32*(i-top),g);
+				draw("pointerSel","icon",210,90+32*(i-top),g);
 			}
 		}
 		
 		if(state == INVENTORY || state == INVENTORYREARRANGE)
 		{
-			draw("pointer",210,90+32*cursorAlign,g);
+			draw("pointer","icon",210,90+32*cursorAlign,g);
 		}
 		
 		if(state != INVENTORYSORT)
@@ -2729,7 +2869,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		}
 		else
 		{
-			draw("pointer",200+curIndex()%2*240,21,g);
+			draw("pointer","icon",200+curIndex()%2*240,21,g);
 		}
 		
 		if(inventory.size() > 15)
@@ -2751,57 +2891,62 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 	
 	public void drawMapDialogue(Graphics g)
 	{
-		draw("dialogueBox",350,100,g);
-		
-		if(curEvent.type == Event.NPC && curIndex() < curEvent.getDialogue(curEvent.state).size()-1)
+		if((curEvent.type == Event.NPC && (curEvent.name.equals("") || curEvent.name.equals("Sign"))) || curEvent.type == Event.CHEST) //Observation, Sign, Chest
 		{
-			draw("npcNextDialogue",705,225,g);
-		}
-		
-		g.setColor(menuBlue);
-		g.fillRect(360,115,110,110);
-		
-		try
-		{
+			draw("observationBox",350,115,g);
+			
+			if(curIndex() < curEvent.getDialogue(curEvent.state).size()-1)
+			{
+				draw("npcNextDialogue","icon",595,205,g);
+			}
+			
+			g.setColor(Color.BLACK);
+			g.fillRect(370,130,225,75);
+			g.setColor(Color.WHITE);
+			g.fillRect(372,132,221,71);
+			
+			g.setColor(Color.BLACK);
+			g.setFont(arialBold12);
 			if(curEvent.type == Event.CHEST)
 			{
-				draw("npcPortChest","npc",365,120,g);
-			}
-			else if(curEvent.name.equals("Sign"))
-			{
-				draw("npcPortSign","npc",365,120,g);
+				drawCenteredString(curEvent.getDialogue(0).get(curIndex())[1],482,170,g);
 			}
 			else
 			{
-				draw("npcPort" + curEvent.imageName,"npc",365,120,g);	
+				g.drawString(curEvent.getDialogue(curEvent.state).get(curIndex())[0],380,150);
+				g.drawString(curEvent.getDialogue(curEvent.state).get(curIndex())[1],380,170);
+				g.drawString(curEvent.getDialogue(curEvent.state).get(curIndex())[2],380,190);
 			}
 		}
-		catch(Exception e)
+		else
 		{
-			System.out.println("port error: " + curEvent.name);
-		}
-		
-		g.setColor(Color.BLACK);
-		g.setFont(arialBold16);
-		if(curEvent.type == Event.NPC)
-		{
+			draw("dialogueBox",350,100,g);
+			
+			if(curEvent.type == Event.NPC && curIndex() < curEvent.getDialogue(curEvent.state).size()-1)
+			{
+				draw("npcNextDialogue","icon",705,225,g);
+			}
+			
+			g.setColor(menuBlue);
+			g.fillRect(360,115,110,110);
+			
+			draw("npcPort" + curEvent.imageName,"event",365,120,g);	
+			
+			g.setColor(Color.BLACK);
+			g.setFont(arialBold16);
 			g.drawString(curEvent.name,485,130);
+			
+			g.setColor(Color.BLACK);
+			g.fillRect(480,150,225,75);
+			g.setColor(Color.WHITE);
+			g.fillRect(482,152,221,71);
+			
+			g.setColor(Color.BLACK);
+			g.setFont(arialBold12);
+			g.drawString(curEvent.getDialogue(curEvent.state).get(curIndex())[0],490,170);
+			g.drawString(curEvent.getDialogue(curEvent.state).get(curIndex())[1],490,190);
+			g.drawString(curEvent.getDialogue(curEvent.state).get(curIndex())[2],490,210);
 		}
-		else if(curEvent.type == Event.CHEST)
-		{
-			g.drawString("Item",485,130);
-		}
-		
-		g.setColor(Color.BLACK);
-		g.fillRect(480,150,225,75);
-		g.setColor(Color.WHITE);
-		g.fillRect(482,152,221,71);
-		
-		g.setColor(Color.BLACK);
-		g.setFont(arialBold12);
-		g.drawString(curEvent.getDialogue(curEvent.state).get(curIndex())[0],490,170);
-		g.drawString(curEvent.getDialogue(curEvent.state).get(curIndex())[1],490,190);
-		g.drawString(curEvent.getDialogue(curEvent.state).get(curIndex())[2],490,210);
 	}
 	
 	public void drawInnChoice(Graphics g)
@@ -2813,7 +2958,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		
 		try
 		{
-			draw("npcPort" + curEvent.imageName,"npc",365,120,g);	
+			draw("npcPort" + curEvent.imageName,"event",365,120,g);	
 		}
 		catch(Exception e)
 		{
@@ -2836,7 +2981,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		g.drawString("No",530,210);
 		g.drawString("Yes",630,210);
 		
-		draw("pointer",490+100*curIndex(),190,g);
+		draw("pointer","icon",490+100*curIndex(),190,g);
 	}
 	
 	public void drawEditParty(Graphics g)
@@ -2862,8 +3007,8 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			{
 				g.setColor(Color.BLACK);
 				g.fillRect(40,67+180*i,154,154);
-				draw("port" + party[i].name,42,69+180*i,g);
-				if(party[i].hp == 0) draw("dead",42,69+180*i,g);
+				draw("port" + party[i].name,"port",42,69+180*i,g);
+				if(party[i].hp == 0) draw("dead","port",42,69+180*i,g);
 				
 				g.setFont(arialBold20);
 				g.drawString(party[i].name,215,85+180*i);
@@ -2928,8 +3073,8 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					
 					g.setColor(Color.BLACK);
 					g.fillRect(470+175*xPos,67+180*yPos,154,154);
-					draw("port" + party[i].name,472+175*xPos,69+180*yPos,g);
-					if(party[i].hp == 0) draw("dead",472+175*xPos,69+180*yPos,g);
+					draw("port" + party[i].name,"port",472+175*xPos,69+180*yPos,g);
+					if(party[i].hp == 0) draw("dead","port",472+175*xPos,69+180*yPos,g);
 				}
 			}
 		}
@@ -2938,27 +3083,27 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		{
 			if(prevIndex(1) < 3)
 			{
-				draw("pointerSelected",15,120+180*prevIndex(1),g);
+				draw("pointerSel","icon",15,120+180*prevIndex(1),g);
 			}
 			else
 			{
 				int xPos = (prevIndex(1)+1)%2;
 				int yPos = (prevIndex(1)-3)/2;
 				
-				draw("pointerSelected",445+175*xPos,120+180*yPos,g);
+				draw("pointerSel","icon",445+175*xPos,120+180*yPos,g);
 			}
 		}
 		
 		if(curIndex() < 3)
 		{
-			draw("pointer",15,120+180*curIndex(),g);
+			draw("pointer","icon",15,120+180*curIndex(),g);
 		}
 		else
 		{
 			int xPos = (curIndex()+1)%2;
 			int yPos = (curIndex()-3)/2;
 			
-			draw("pointer",445+175*xPos,120+180*yPos,g);
+			draw("pointer","icon",445+175*xPos,120+180*yPos,g);
 		}
 	}
 	
@@ -3010,15 +3155,15 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			{
 				g.setColor(Color.BLACK);
 				g.fillRect(40,67+180*i,154,154);
-				draw("port" + party[i].name,42,69+180*i,g);
-				if(party[i].hp == 0) draw("dead",42,69+180*i,g);
+				draw("port" + party[i].name,"port",42,69+180*i,g);
+				if(party[i].hp == 0) draw("dead","port",42,69+180*i,g);
 				
 				int statusIndex = 0;
 				for(int j=0; j<party[i].status.length; j++)
 				{
 					if(party[i].status[j] > 0)
 					{
-						draw("iconStatus" + j,480-25*statusIndex,70+180*i,g);
+						draw("iconStatus" + j,"icon",480-25*statusIndex,70+180*i,g);
 						statusIndex++;
 					}
 				}
@@ -3081,12 +3226,12 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			if(!canSave()) g.setColor(lightGray);
 			g.drawString("Save",675,416);
 			
-			if(state == MAINMENU) draw("pointer",625,60+56*curIndex(),g);
-			else if(state == GAMESAVED) draw("pointerSelected",625,60+56*6,g);
+			if(state == MAINMENU) draw("pointer","icon",625,60+56*curIndex(),g);
+			else if(state == GAMESAVED) draw("pointerSel","icon",625,60+56*6,g);
 			else
 			{
-				draw("pointerSelected",625,60+56*prevIndex(1),g);
-				draw("pointer",15,120+180*curIndex(),g);
+				draw("pointerSel","icon",625,60+56*prevIndex(1),g);
+				draw("pointer","icon",15,120+180*curIndex(),g);
 			}
 			
 			g.setColor(menuDarkGreen);
@@ -3095,13 +3240,12 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			g.fillRect(615,500,210,110);
 			
 			g.setColor(Color.BLACK);
-			g.setFont(arialBold18);
-			g.drawString(curMap.name,625,528);
 			g.setFont(arialBold16);
+			g.drawString(curMap.name,625,528);
 			g.drawString("Money",625,563);
 			drawStringRightAligned(""+moneyFormat(money),800,563,g);
 			g.drawString("Play time",625,593);
-			drawStringRightAligned(gameTimeString(),800,593,g);
+			drawStringRightAligned(gameTimeString(gameTime),800,593,g);
 		}
 		
 		if(state == INVENTORYUSE)
@@ -3117,12 +3261,12 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			g.setFont(arialBold16);
 			g.drawString("Using item:",625,70);
 			
-			draw(usingItem.getIconString(),617,78,g);
+			draw(usingItem.getIconString(),"icon",617,78,g);
 			g.setFont(arialBold20);
 			g.drawString(usingItem.name,650,100);
 			g.drawString(""+usingItem.qty,800,100);
 			
-			draw("pointer",15,120+180*curIndex(),g);
+			draw("pointer","icon",15,120+180*curIndex(),g);
 		}
 	}
 	
@@ -3158,7 +3302,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		g.fillRect(x-1,y-1,22,22);
 		g.setColor(lightGray);
 		g.fillRect(x,y,20,20);
-		draw(icon,x,y,g);
+		draw(icon,"icon",x,y,g);
 	}
 	
 	public void drawStatusMenu(Graphics g)
@@ -3196,15 +3340,15 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		
 		g.setColor(Color.BLACK);
 		g.fillRect(40,57,154,154);
-		draw("port" + calculatingCharacter.name,42,59,g);
-		if(calculatingCharacter.hp == 0) draw("dead",42,59,g);
+		draw("port" + calculatingCharacter.name,"port",42,59,g);
+		if(calculatingCharacter.hp == 0) draw("dead","port",42,59,g);
 
 		int statusIndex = 0;
 		for(int j=0; j<calculatingCharacter.status.length; j++)
 		{
 			if(calculatingCharacter.status[j] > 0)
 			{
-				draw("iconStatus" + j,400-25*statusIndex,60,g);
+				draw("iconStatus" + j,"icon",400-25*statusIndex,60,g);
 				statusIndex++;
 			}
 		}
@@ -3341,38 +3485,25 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		g.setColor(Color.WHITE);
 		g.drawString("Element Resistance",265,260);
 		
-		drawBorderedIcon("iconElement0",280,285,g);
-		drawBorderedIcon("iconElement1",400,285,g);
-		drawBorderedIcon("iconElement2",280,335,g);
-		drawBorderedIcon("iconElement3",400,335,g);
-		drawBorderedIcon("iconElement4",280,385,g);
-		drawBorderedIcon("iconElement5",400,385,g);
+		drawBorderedIcon("iconElement0",280,280,g);
+		drawBorderedIcon("iconElement1",400,280,g);
+		drawBorderedIcon("iconElement2",280,318,g);
+		drawBorderedIcon("iconElement3",400,318,g);
+		drawBorderedIcon("iconElement4",280,356,g);
+		drawBorderedIcon("iconElement5",400,356,g);
+		drawBorderedIcon("iconElement6",280,394,g);
+		drawBorderedIcon("iconElement7",400,394,g);
 		g.setColor(Color.BLACK);
 		g.setFont(arialBold16);
-		if(state == EQUIPMENUSEL && calculatingCharacter.elementResistance[SNACK] > selectedCharacter.elementResistance[SNACK]) g.setColor(statUpGreen);
-		else if(state == EQUIPMENUSEL && calculatingCharacter.elementResistance[SNACK] < selectedCharacter.elementResistance[SNACK]) g.setColor(Color.RED); 
-		else g.setColor(Color.BLACK);
-		g.drawString(calculatingCharacter.elementResistance[SNACK] + "%",310,300);
-		if(state == EQUIPMENUSEL && calculatingCharacter.elementResistance[FIRE] > selectedCharacter.elementResistance[FIRE]) g.setColor(statUpGreen);
-		else if(state == EQUIPMENUSEL && calculatingCharacter.elementResistance[FIRE] < selectedCharacter.elementResistance[FIRE]) g.setColor(Color.RED); 
-		else g.setColor(Color.BLACK);
-		g.drawString(calculatingCharacter.elementResistance[FIRE] + "%",430,300);
-		if(state == EQUIPMENUSEL && calculatingCharacter.elementResistance[LIGHTNING] > selectedCharacter.elementResistance[LIGHTNING]) g.setColor(statUpGreen);
-		else if(state == EQUIPMENUSEL && calculatingCharacter.elementResistance[LIGHTNING] < selectedCharacter.elementResistance[LIGHTNING]) g.setColor(Color.RED); 
-		else g.setColor(Color.BLACK);
-		g.drawString(calculatingCharacter.elementResistance[LIGHTNING] + "%",310,350);
-		if(state == EQUIPMENUSEL && calculatingCharacter.elementResistance[WATER] > selectedCharacter.elementResistance[WATER]) g.setColor(statUpGreen);
-		else if(state == EQUIPMENUSEL && calculatingCharacter.elementResistance[WATER] < selectedCharacter.elementResistance[WATER]) g.setColor(Color.RED); 
-		else g.setColor(Color.BLACK);
-		g.drawString(calculatingCharacter.elementResistance[WATER] + "%",430,350);
-		if(state == EQUIPMENUSEL && calculatingCharacter.elementResistance[EARTH] > selectedCharacter.elementResistance[EARTH]) g.setColor(statUpGreen);
-		else if(state == EQUIPMENUSEL && calculatingCharacter.elementResistance[EARTH] < selectedCharacter.elementResistance[EARTH]) g.setColor(Color.RED); 
-		else g.setColor(Color.BLACK);
-		g.drawString(calculatingCharacter.elementResistance[EARTH] + "%",310,400);
-		if(state == EQUIPMENUSEL && calculatingCharacter.elementResistance[POISON] > selectedCharacter.elementResistance[POISON]) g.setColor(statUpGreen);
-		else if(state == EQUIPMENUSEL && calculatingCharacter.elementResistance[POISON] < selectedCharacter.elementResistance[POISON]) g.setColor(Color.RED); 
-		else g.setColor(Color.BLACK);
-		g.drawString(calculatingCharacter.elementResistance[POISON] + "%",430,400);
+
+		int[] elementList = {ELEMENT_SNACK, ELEMENT_FIRE, ELEMENT_LIGHTNING, ELEMENT_WATER, ELEMENT_EARTH, ELEMENT_POISON, ELEMENT_DARK, ELEMENT_HOLY};
+		for(int element=0; element<elementList.length; element++)
+		{
+			if(state == EQUIPMENUSEL && calculatingCharacter.elementResistance[element] > selectedCharacter.elementResistance[element]) g.setColor(statUpGreen);
+			else if(state == EQUIPMENUSEL && calculatingCharacter.elementResistance[element] < selectedCharacter.elementResistance[element]) g.setColor(Color.RED); 
+			else g.setColor(Color.BLACK);
+			g.drawString(calculatingCharacter.elementResistance[element] + "%",310+120*(element%2),295+38*(element/2));
+		}
 		
 		/**
 		 * Status Resistance
@@ -3381,43 +3512,25 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		g.setColor(Color.WHITE);
 		g.drawString("Status Resistance",265,445);
 		
-		drawBorderedIcon("iconStatus0",280,465,g);
-		drawBorderedIcon("iconStatus1",400,465,g);
-		drawBorderedIcon("iconStatus2",280,500,g);
-		drawBorderedIcon("iconStatus3",400,500,g);
-		drawBorderedIcon("iconStatus7",280,535,g);
-		drawBorderedIcon("iconStatus9",400,535,g);
-		drawBorderedIcon("iconStatus13",280,570,g);
+		drawBorderedIcon("iconStatus" + STATUS_POISON,280,465,g);
+		drawBorderedIcon("iconStatus" + STATUS_SILENCE,400,465,g);
+		drawBorderedIcon("iconStatus" + STATUS_BLIND,280,500,g);
+		drawBorderedIcon("iconStatus" + STATUS_SLEEP,400,500,g);
+		drawBorderedIcon("iconStatus" + STATUS_SLOW,280,535,g);
+		drawBorderedIcon("iconStatus" + STATUS_BERSERK,400,535,g);
+		drawBorderedIcon("iconStatus" + STATUS_SHAME,280,570,g);
+		drawBorderedIcon("iconStatus" + STATUS_DEATH,400,570,g);
 		g.setColor(Color.BLACK);
 		g.setFont(arialBold16);
-		if(state == EQUIPMENUSEL && calculatingCharacter.statusResistance[Unit.POISON] > selectedCharacter.statusResistance[Unit.POISON]) g.setColor(statUpGreen);
-		else if(state == EQUIPMENUSEL && calculatingCharacter.statusResistance[Unit.POISON] < selectedCharacter.statusResistance[Unit.POISON]) g.setColor(Color.RED); 
-		else g.setColor(Color.BLACK);
-		g.drawString(calculatingCharacter.statusResistance[Unit.POISON] + "%",310,480);
-		if(state == EQUIPMENUSEL && calculatingCharacter.statusResistance[Unit.SILENCE] > selectedCharacter.statusResistance[Unit.SILENCE]) g.setColor(statUpGreen);
-		else if(state == EQUIPMENUSEL && calculatingCharacter.statusResistance[Unit.SILENCE] < selectedCharacter.statusResistance[Unit.SILENCE]) g.setColor(Color.RED); 
-		else g.setColor(Color.BLACK);
-		g.drawString(calculatingCharacter.statusResistance[Unit.SILENCE] + "%",430,480);
-		if(state == EQUIPMENUSEL && calculatingCharacter.statusResistance[Unit.BLIND] > selectedCharacter.statusResistance[Unit.BLIND]) g.setColor(statUpGreen);
-		else if(state == EQUIPMENUSEL && calculatingCharacter.statusResistance[Unit.BLIND] < selectedCharacter.statusResistance[Unit.BLIND]) g.setColor(Color.RED); 
-		else g.setColor(Color.BLACK);
-		g.drawString(calculatingCharacter.statusResistance[Unit.BLIND] + "%",310,515);
-		if(state == EQUIPMENUSEL && calculatingCharacter.statusResistance[Unit.SLEEP] > selectedCharacter.statusResistance[Unit.SLEEP]) g.setColor(statUpGreen);
-		else if(state == EQUIPMENUSEL && calculatingCharacter.statusResistance[Unit.SLEEP] < selectedCharacter.statusResistance[Unit.SLEEP]) g.setColor(Color.RED); 
-		else g.setColor(Color.BLACK);
-		g.drawString(calculatingCharacter.statusResistance[Unit.SLEEP] + "%",430,515);
-		if(state == EQUIPMENUSEL && calculatingCharacter.statusResistance[Unit.SLOW] > selectedCharacter.statusResistance[Unit.SLOW]) g.setColor(statUpGreen);
-		else if(state == EQUIPMENUSEL && calculatingCharacter.statusResistance[Unit.SLOW] < selectedCharacter.statusResistance[Unit.SLOW]) g.setColor(Color.RED); 
-		else g.setColor(Color.BLACK);
-		g.drawString(calculatingCharacter.statusResistance[Unit.SLOW] + "%",310,550);
-		if(state == EQUIPMENUSEL && calculatingCharacter.statusResistance[Unit.BERSERK] > selectedCharacter.statusResistance[Unit.BERSERK]) g.setColor(statUpGreen);
-		else if(state == EQUIPMENUSEL && calculatingCharacter.statusResistance[Unit.BERSERK] < selectedCharacter.statusResistance[Unit.BERSERK]) g.setColor(Color.RED); 
-		else g.setColor(Color.BLACK);
-		g.drawString(calculatingCharacter.statusResistance[Unit.BERSERK] + "%",430,550);
-		if(state == EQUIPMENUSEL && calculatingCharacter.statusResistance[Unit.SHAME] > selectedCharacter.statusResistance[Unit.SHAME]) g.setColor(statUpGreen);
-		else if(state == EQUIPMENUSEL && calculatingCharacter.statusResistance[Unit.SHAME] < selectedCharacter.statusResistance[Unit.SHAME]) g.setColor(Color.RED); 
-		else g.setColor(Color.BLACK);
-		g.drawString(calculatingCharacter.statusResistance[Unit.SHAME] + "%",310,585);
+		
+		int[] statusList = {STATUS_POISON, STATUS_SILENCE, STATUS_BLIND, STATUS_SLEEP, STATUS_SLOW, STATUS_BERSERK, STATUS_SHAME, STATUS_DEATH};
+		for(int status=0; status<statusList.length; status++)
+		{
+			if(state == EQUIPMENUSEL && calculatingCharacter.statusResistance[status] > selectedCharacter.statusResistance[status]) g.setColor(statUpGreen);
+			else if(state == EQUIPMENUSEL && calculatingCharacter.statusResistance[status] < selectedCharacter.statusResistance[status]) g.setColor(Color.RED); 
+			else g.setColor(Color.BLACK);
+			g.drawString(calculatingCharacter.statusResistance[status] + "%",310+120*(status%2),480+35*(status/2));
+		}
 		
 		/**
 		 * Equipment
@@ -3457,7 +3570,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				int currentSP;
 				for(int i=0; i<selectedEquip.activeSkills.size(); i++)
 				{
-					draw("iconActive",525,520+25*yIndex,g);
+					draw("iconActive","icon",525,520+25*yIndex,g);
 					
 					if(selectedEquip.activeSkills.get(i).canLearn(selectedCharacter))
 					{
@@ -3506,7 +3619,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				
 				for(int i=0; i<selectedEquip.passiveSkills.size(); i++)
 				{
-					draw("iconPassive",525,520+25*yIndex,g);
+					draw("iconPassive","icon",525,520+25*yIndex,g);
 					
 					if(selectedEquip.passiveSkills.get(i).canLearn(selectedCharacter))
 					{
@@ -3578,7 +3691,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				Item equip = selectedCharacter.equip[i];
 				if(equip.id != Item.NOITEM)
 				{
-					draw(equip.getIconString(),620,270+27*i,g);
+					draw(equip.getIconString(),"icon",620,270+27*i,g);
 					g.drawString(equip.name,655,290+27*i);
 				}
 				else
@@ -3587,7 +3700,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				}
 			}
 			
-			if(state == EQUIPMENU) draw("pointer",490,270+27*curIndex(),g);
+			if(state == EQUIPMENU) draw("pointer","icon",490,270+27*curIndex(),g);
 		}
 		else if(state == EQUIPMENUSEL)
 		{
@@ -3622,13 +3735,13 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				else
 				{
 					g.setFont(arialBold16);
-					draw(inventory.get(index).getIconString(),525,270+27*(i-top),g);
+					draw(inventory.get(index).getIconString(),"icon",525,270+27*(i-top),g);
 					g.drawString(inventory.get(index).name,560,290+27*(i-top));
 					g.drawString(""+inventory.get(index).qty,780,290+27*(i-top));
 				}
 			}
 			
-			draw("pointer",490,270+27*cursorAlign,g);
+			draw("pointer","icon",490,270+27*cursorAlign,g);
 		}
 		
 		if(state == STATUSMENU || state == STATUSMENUMOREINFO)
@@ -3675,13 +3788,16 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					case 17: moreInfo = "Reduces damage from Water element attacks"; break;
 					case 18: moreInfo = "Reduces damage from Earth element attacks"; break;
 					case 19: moreInfo = "Reduces damage from Poison element attacks"; break;
-					case 20: moreInfo = "Poison status - take damage each turn"; break;
-					case 21: moreInfo = "Silence status - can't use skills in battle"; break;
-					case 22: moreInfo = "Blind status - greatly reduces hit rate"; break;
-					case 23: moreInfo = "Sleep status - can't take action until woken up"; break;
-					case 24: moreInfo = "Slow status - take fewer actions in battle"; break;
-					case 25: moreInfo = "Berserk status - auto-attack with boosted strength"; break;
-					case 26: moreInfo = "Shame status - prevents positive status effects"; break;
+					case 20: moreInfo = "Reduces damage from Dark element attacks"; break;
+					case 21: moreInfo = "Reduces damage from Holy element attacks"; break;
+					case 22: moreInfo = "Poison status - take damage each turn"; break;
+					case 23: moreInfo = "Silence status - can't use skills in battle"; break;
+					case 24: moreInfo = "Blind status - greatly reduces hit rate"; break;
+					case 25: moreInfo = "Sleep status - can't take action until woken up"; break;
+					case 26: moreInfo = "Slow status - take fewer actions in battle"; break;
+					case 27: moreInfo = "Berserk status - auto-attack with boosted strength"; break;
+					case 28: moreInfo = "Shame status - prevents positive status effects"; break;
+					case 29: moreInfo = "Death status - instant death effects"; break;
 				}
 				
 				int x = 0, y = 0;
@@ -3702,24 +3818,27 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					case 11: x = 10; y = 507; break;
 					case 12: x = 10; y = 537; break;
 					case 13: x = 10; y = 567; break;
-					case 14: x = 234; y = 283; break;
-					case 15: x = 354; y = 283; break;
-					case 16: x = 234; y = 333; break;
-					case 17: x = 354; y = 333; break;
-					case 18: x = 234; y = 383; break;
-					case 19: x = 354; y = 383; break;
-					case 20: x = 234; y = 463; break;
-					case 21: x = 354; y = 463; break;
-					case 22: x = 234; y = 498; break;
-					case 23: x = 354; y = 498; break;
-					case 24: x = 234; y = 533; break;
-					case 25: x = 354; y = 533; break;
-					case 26: x = 234; y = 568; break;
+					case 14: x = 234; y = 278; break;
+					case 15: x = 354; y = 278; break;
+					case 16: x = 234; y = 316; break;
+					case 17: x = 354; y = 316; break;
+					case 18: x = 234; y = 354; break;
+					case 19: x = 354; y = 354; break;
+					case 20: x = 234; y = 392; break;
+					case 21: x = 354; y = 392; break;
+					case 22: x = 234; y = 463; break;
+					case 23: x = 354; y = 463; break;
+					case 24: x = 234; y = 498; break;
+					case 25: x = 354; y = 498; break;
+					case 26: x = 234; y = 533; break;
+					case 27: x = 354; y = 533; break;
+					case 28: x = 234; y = 568; break;
+					case 29: x = 354; y = 568; break;
 				}
 				
 				g.drawString(moreInfo,525,205);
 				
-				draw("pointer",x,y,g);
+				draw("pointer","icon",x,y,g);
 			}
 		}
 	}
@@ -3750,15 +3869,15 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		
 		g.setColor(Color.BLACK);
 		g.fillRect(40,57,154,154);
-		draw("port" + party[partyIndex].name,42,59,g);
-		if(party[partyIndex].hp == 0) draw("dead",42,59,g);
+		draw("port" + party[partyIndex].name,"port",42,59,g);
+		if(party[partyIndex].hp == 0) draw("dead","port",42,59,g);
 
 		int statusIndex = 0;
 		for(int j=0; j<party[partyIndex].status.length; j++)
 		{
 			if(party[partyIndex].status[j] > 0)
 			{
-				draw("iconStatus" + j,400-25*statusIndex,60,g);
+				draw("iconStatus" + j,"icon",400-25*statusIndex,60,g);
 				statusIndex++;
 			}
 		}
@@ -3830,7 +3949,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			else g.setColor(lightGray);
 			drawCenteredString("Passive Skills",615,260,g);
 			
-			draw("pointerSelected",140,240,g);
+			draw("pointerSel","icon",140,240,g);
 			
 			//draw active skills
 			int top = Math.max(0, curIndex()-cursorAlign);
@@ -3840,10 +3959,19 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			for(int i=top; i<=bottom; i++)
 			{
 				g.drawString(party[partyIndex].getLearnedActiveSkills().get(i).action.name,75,305+35*(i-top));
-				drawStringRightAligned(party[partyIndex].getLearnedActiveSkills().get(i).action.getMPCost(party[partyIndex]) + " MP",350,305+35*(i-top),g);
+				
+				int mpCost = party[partyIndex].getLearnedActiveSkills().get(i).action.getMPCost(party[partyIndex]);
+				if(mpCost != -1)
+				{
+					drawStringRightAligned(mpCost + " MP",350,305+35*(i-top),g);
+				}
+				else
+				{
+					drawStringRightAligned("? MP",350,305+35*(i-top),g);
+				}
 			}
 			
-			draw("pointer",33,285+35*(curIndex()-top),g);
+			draw("pointer","icon",33,285+35*(curIndex()-top),g);
 			
 			//draw passive skills (only the top 9)
 			top = 0;
@@ -3882,7 +4010,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			g.setColor(Color.YELLOW);
 			drawCenteredString("Passive Skills",615,260,g);
 			
-			draw("pointerSelected",530,240,g);
+			draw("pointerSel","icon",530,240,g);
 			
 			//draw passive skills
 			int top = Math.max(0, curIndex()-cursorAlign);
@@ -3914,7 +4042,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				g.drawString(""+party[partyIndex].getLearnedPassiveSkills().get(i).cubeCost,765,305+35*(i-top));
 			}
 			
-			draw("pointer",430,285+35*(curIndex()-top),g);
+			draw("pointer","icon",430,285+35*(curIndex()-top),g);
 			
 			//draw active skills (only the top 9)
 			top = 0;
@@ -3923,7 +4051,16 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			for(int i=top; i<=bottom; i++)
 			{
 				g.drawString(party[partyIndex].getLearnedActiveSkills().get(i).action.name,75,305+35*(i-top));
-				drawStringRightAligned(party[partyIndex].getLearnedActiveSkills().get(i).action.getMPCost(party[partyIndex]) + " MP",350,305+35*(i-top),g);
+				
+				int mpCost = party[partyIndex].getLearnedActiveSkills().get(i).action.getMPCost(party[partyIndex]);
+				if(mpCost != -1)
+				{
+					drawStringRightAligned(mpCost + " MP",350,305+35*(i-top),g);
+				}
+				else
+				{
+					drawStringRightAligned("? MP",350,305+35*(i-top),g);
+				}
 			}
 		}
 		else if(state == SKILLMENUSEL)
@@ -3935,7 +4072,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			else g.setColor(lightGray);
 			drawCenteredString("Passive Skills",615,260,g);
 			
-			draw("pointer",140+390*curIndex(),240,g);
+			draw("pointer","icon",140+390*curIndex(),240,g);
 			
 			//draw active skills (only the top 9)
 			int top = 0;
@@ -3945,7 +4082,16 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			for(int i=top; i<=bottom; i++)
 			{
 				g.drawString(party[partyIndex].getLearnedActiveSkills().get(i).action.name,75,305+35*(i-top));
-				drawStringRightAligned(party[partyIndex].getLearnedActiveSkills().get(i).action.getMPCost(party[partyIndex]) + " MP",350,305+35*(i-top),g);
+				
+				int mpCost = party[partyIndex].getLearnedActiveSkills().get(i).action.getMPCost(party[partyIndex]);
+				if(mpCost != -1)
+				{
+					drawStringRightAligned(mpCost + " MP",350,305+35*(i-top),g);
+				}
+				else
+				{
+					drawStringRightAligned("? MP",350,305+35*(i-top),g);
+				}
 			}
 			
 			//draw passive skills (only the top 9)
@@ -4037,9 +4183,9 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			{
 				Action skill = party[partyIndex].getLearnedActiveSkills().get(curIndex()).action;
 				
-				if(skill.element != NOELEMENT)
+				if(skill.element != ELEMENT_NONE)
 				{
-					draw("iconElement" + skill.element,522,177,g);
+					draw("iconElement" + skill.element,"icon",522,177,g);
 					g.drawString(skill.desc,525,215);
 				}
 				else
@@ -4121,6 +4267,10 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					 draw(characterName + "_" + NORMAL,folder,x,y,g);
 				 }
 			}
+			else if(folder.equals("battleBackground"))
+			{
+				draw("battleBackground_0",folder,0,0,g);
+			}
 			else
 			{
 				System.out.println(e.getMessage() + ": " + name);
@@ -4144,13 +4294,18 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		}
 	}
 	
-	public void drawTile(int tile, int i, int j, Graphics g)
+	public void drawTile(int tile, int i, int j, int timer, Graphics g)
 	{
 		try
 		{
-			if(Tile.movingTileList().contains(tile) && tileState == 1)
+			if(Tile.movingTileList().contains(tile))
 			{
-				g.drawImage(tileAltImage[movingTileList.indexOf(tile)],400+i*50+xOffset,300+j*50+yOffset,this);
+				int numAnimationStates = Tile.numAnimationStates(tile);
+				int framesPerAnimationState = Tile.framesPerAnimationState(tile);
+				
+				int actualAnimationState = (timer / framesPerAnimationState) % numAnimationStates;
+				
+				g.drawImage(movingTileImage.get(movingTileList.indexOf(tile))[actualAnimationState],400+i*50+xOffset,300+j*50+yOffset,this);
 			}
 			else
 			{
@@ -4164,13 +4319,18 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		}
 	}
 	
-	public void drawThing(int thing, int i, int j, Graphics g)
+	public void drawThing(int thing, int i, int j, int timer, Graphics g)
 	{
 		try
 		{
-			if(Thing.movingThingList().contains(thing) && tileState == 1)
+			if(Thing.movingThingList().contains(thing))
 			{
-				g.drawImage(thingAltImage[movingThingList.indexOf(thing)],400+i*50+xOffset,300+j*50+yOffset,this);
+				int numAnimationStates = Thing.numAnimationStates(thing);
+				int framesPerAnimationState = Thing.framesPerAnimationState(thing);
+				
+				int actualAnimationState = (timer / framesPerAnimationState) % numAnimationStates;
+
+				g.drawImage(movingThingImage.get(movingThingList.indexOf(thing))[actualAnimationState],400+i*50+xOffset,300+j*50+yOffset,this);
 			}
 			else
 			{
@@ -4210,7 +4370,14 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				{
 					try
 					{
-						drawTile(curMap.tile[curX+i][curY+j].type,i,j,g);
+						if(Tile.hasOwnTimer(curMap.tile[curX+i][curY+j].type))
+						{
+							drawTile(curMap.tile[curX+i][curY+j].type,i,j,curMap.tile[curX+i][curY+j].timer,g);
+						}
+						else
+						{
+							drawTile(curMap.tile[curX+i][curY+j].type,i,j,frameCount,g);
+						}
 					}
 					catch(Exception e)
 					{
@@ -4220,7 +4387,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				}
 				else
 				{
-					drawTile(Tile.BLACK,i,j,g);
+					drawTile(Tile.BLACK,i,j,0,g);
 				}
 			}
 		}
@@ -4229,11 +4396,13 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		ArrayList<Integer> priorityThing = new ArrayList<Integer>();
 		ArrayList<Integer> priorityX = new ArrayList<Integer>();
 		ArrayList<Integer> priorityY = new ArrayList<Integer>();
+		ArrayList<Integer> priorityTimer = new ArrayList<Integer>();
 		
 		boolean drawCoverPlayer = false;
 		ArrayList<Integer> coverPlayerThing = new ArrayList<Integer>();
 		ArrayList<Integer> coverPlayerX = new ArrayList<Integer>();
 		ArrayList<Integer> coverPlayerY = new ArrayList<Integer>();
+		ArrayList<Integer> coverPlayerTimer = new ArrayList<Integer>();
 		
 		for(int i=-17; i<10; i++)
 		{
@@ -4243,19 +4412,28 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				{
 					if(curMap.tile[curX+i][curY+j].thing.type != Thing.NOTHING)
 					{
-						if(curMap.tile[curX+i][curY+j].thing.priority)
+						if(curMap.tile[curX+i][curY+j].thing.priority) //should be drawn on top of other things
 						{
 							drawPriorityThing = true;
 							priorityThing.add(curMap.tile[curX+i][curY+j].thing.type);
 							priorityX.add(i);
 							priorityY.add(j);
+							priorityTimer.add(curMap.tile[curX+i][curY+j].thing.timer);
+						}
+						else if(curMap.tile[curX+i][curY+j].thing.coverPlayer) //should be drawn on top of the player
+						{
+							drawCoverPlayer = true;
+							coverPlayerThing.add(curMap.tile[curX+i][curY+j].thing.type);
+							coverPlayerX.add(i);
+							coverPlayerY.add(j);
+							coverPlayerTimer.add(curMap.tile[curX+i][curY+j].thing.timer);
 						}
 						else if(curX+i > 0)
 						{
 							if(curMap.tile[curX+i][curY+j].thing.type == Thing.BIGROCK && !curMap.tile[curX+i-1][curY+j].isWater()
 									&& curMap.tile[curX+i][curY+j].isWater())
 							{
-								drawThing(Thing.SHOREWEST,i,j,g);
+								drawThing(Thing.SHOREWEST,i,j,0,g);
 							}
 						}
 						
@@ -4264,81 +4442,36 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 						{
 							if(curMap.tile[curX+i][curY+j].isWater() && (!curMap.tile[curX+i+1][curY+j].isWater() && curMap.tile[curX+i+1][curY+j].type != Tile.ICE))
 							{
-								drawThing(Thing.SHOREEAST,i,j,g);
+								drawThing(Thing.SHOREEAST,i,j,0,g);
 							}
 							
 							if(curMap.tile[curX+i][curY+j].isWater() && (!curMap.tile[curX+i-1][curY+j].isWater() && curMap.tile[curX+i-1][curY+j].type != Tile.ICE))
 							{
-								drawThing(Thing.SHOREWEST,i,j,g);
+								drawThing(Thing.SHOREWEST,i,j,0,g);
 							}
 							
 							if(curMap.tile[curX+i][curY+j].isWater() && (!curMap.tile[curX+i][curY+j+1].isWater() && curMap.tile[curX+i][curY+j+1].type != Tile.ICE))
 							{
-								drawThing(Thing.SHORESOUTH,i,j,g);
+								drawThing(Thing.SHORESOUTH,i,j,0,g);
 							}
 							
 							if(curMap.tile[curX+i][curY+j].isWater() && (!curMap.tile[curX+i][curY+j-1].isWater() && curMap.tile[curX+i][curY+j-1].type != Tile.ICE))
 							{
-								drawThing(Thing.SHORENORTH,i,j,g);
+								drawThing(Thing.SHORENORTH,i,j,0,g);
 							}
 						}
 						
-						drawThing(curMap.tile[curX+i][curY+j].thing.type,i,j,g);
-					}
-					
-					//shore correction
-					try
-					{
-						if(curX+i >= 1 && curY+j >= 1 && curX+i < curMap.tile.length-1 && curY+j < curMap.tile[0].length-1)
+						if(Thing.hasOwnTimer(curMap.tile[curX+i][curY+j].thing.type))
 						{
-							if((curMap.tile[curX+i+1][curY+j].thing.type == Thing.SHORENORTH || curMap.tile[curX+i+1][curY+j].thing.type == Thing.SHORENORTHEAST)
-									&& (curMap.tile[curX+i][curY+j-1].thing.type == Thing.SHOREEAST || curMap.tile[curX+i][curY+j-1].thing.type == Thing.SHORENORTHEAST))
-							{
-								drawThing(Thing.SHORENORTHEAST2,i,j,g);
-							}
-							if((curMap.tile[curX+i-1][curY+j].thing.type == Thing.SHORENORTH || curMap.tile[curX+i-1][curY+j].thing.type == Thing.SHORENORTHWEST)
-									&& (curMap.tile[curX+i][curY+j-1].thing.type == Thing.SHOREWEST || curMap.tile[curX+i][curY+j-1].thing.type == Thing.SHORENORTHWEST))
-							{
-								drawThing(Thing.SHORENORTHWEST2,i,j,g);
-							}
-							if((curMap.tile[curX+i+1][curY+j].thing.type == Thing.SHORESOUTH || curMap.tile[curX+i+1][curY+j].thing.type == Thing.SHORESOUTHEAST)
-									&& (curMap.tile[curX+i][curY+j+1].thing.type == Thing.SHOREEAST || curMap.tile[curX+i][curY+j+1].thing.type == Thing.SHORESOUTHEAST))
-							{
-								drawThing(Thing.SHORESOUTHEAST2,i,j,g);
-							}
-							if((curMap.tile[curX+i-1][curY+j].thing.type == Thing.SHORESOUTH || curMap.tile[curX+i-1][curY+j].thing.type == Thing.SHORESOUTHWEST)
-									&& (curMap.tile[curX+i][curY+j+1].thing.type == Thing.SHOREWEST || curMap.tile[curX+i][curY+j+1].thing.type == Thing.SHORESOUTHWEST
-											|| curMap.tile[curX+i][curY+j+1].thing.type == Thing.BIGROCK))
-							{
-								drawThing(Thing.SHORESOUTHWEST2,i,j,g);
-							}
-							
-							if((curMap.tile[curX+i+1][curY+j].thing.type == Thing.DOCKNORTH || curMap.tile[curX+i+1][curY+j].thing.type == Thing.DOCKNORTHEAST)
-									&& (curMap.tile[curX+i][curY+j-1].thing.type == Thing.DOCKEAST || curMap.tile[curX+i][curY+j-1].thing.type == Thing.DOCKNORTHEAST))
-							{
-								drawThing(Thing.DOCKNORTHEAST2,i,j,g);
-							}
-							if((curMap.tile[curX+i-1][curY+j].thing.type == Thing.DOCKNORTH || curMap.tile[curX+i-1][curY+j].thing.type == Thing.DOCKNORTHWEST)
-									&& (curMap.tile[curX+i][curY+j-1].thing.type == Thing.DOCKWEST || curMap.tile[curX+i][curY+j-1].thing.type == Thing.DOCKNORTHWEST))
-							{
-								drawThing(Thing.DOCKNORTHWEST2,i,j,g);
-							}
-							if((curMap.tile[curX+i+1][curY+j].thing.type == Thing.DOCKSOUTH || curMap.tile[curX+i+1][curY+j].thing.type == Thing.DOCKSOUTHEAST)
-									&& (curMap.tile[curX+i][curY+j+1].thing.type == Thing.DOCKEAST || curMap.tile[curX+i][curY+j+1].thing.type == Thing.DOCKSOUTHEAST))
-							{
-								drawThing(Thing.DOCKSOUTHEAST2,i,j,g);
-							}
-							if((curMap.tile[curX+i-1][curY+j].thing.type == Thing.DOCKSOUTH || curMap.tile[curX+i-1][curY+j].thing.type == Thing.DOCKSOUTHWEST)
-									&& (curMap.tile[curX+i][curY+j+1].thing.type == Thing.DOCKWEST || curMap.tile[curX+i][curY+j+1].thing.type == Thing.DOCKSOUTHWEST))
-							{
-								drawThing(Thing.DOCKSOUTHWEST2,i,j,g);
-							}
+							drawThing(curMap.tile[curX+i][curY+j].thing.type,i,j,curMap.tile[curX+i][curY+j].thing.timer,g);
+						}
+						else
+						{
+							drawThing(curMap.tile[curX+i][curY+j].thing.type,i,j,frameCount,g);
 						}
 					}
-					catch(Exception e)
-					{
-						System.out.println("Error drawing shore at " + i + ", " + j);
-					}
+					
+					//TODO: removed shore correction, make sure shores still draw correctly
 				}
 			}
 		}
@@ -4347,7 +4480,14 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		{
 			for(int i=0; i<priorityThing.size(); i++)
 			{
-				drawThing(priorityThing.get(i),priorityX.get(i),priorityY.get(i),g);
+				if(Thing.hasOwnTimer(priorityThing.get(i)))
+				{
+					drawThing(priorityThing.get(i),priorityX.get(i),priorityY.get(i),priorityTimer.get(i),g);
+				}
+				else
+				{
+					drawThing(priorityThing.get(i),priorityX.get(i),priorityY.get(i),0,g);
+				}
 			}
 		}
 		
@@ -4372,35 +4512,35 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					}
 					else if(mapEvent.type == Event.NPC)
 					{
-						if(mapEvent.name.equals("Sign")) draw("mapSign","npc",400+drawX*50+xOffset,300+drawY*50+yOffset,g);
-						else if(!mapEvent.imageName.equals("")) draw("map" + mapEvent.imageName + mapEvent.dir,"npc",400+drawX*50+xOffset,300+drawY*50+yOffset,g);
+						if(mapEvent.name.equals("Sign")) draw("mapSign","event",400+drawX*50+xOffset,300+drawY*50+yOffset,g);
+						else if(!mapEvent.imageName.equals("")) draw("map" + mapEvent.imageName + mapEvent.dir,"event",400+drawX*50+xOffset,300+drawY*50+yOffset,g);
 					}
 					else if(mapEvent.type == Event.SHOP)
 					{
 						if(!mapEvent.imageName.equals(""))
 						{
-							draw("map" + mapEvent.imageName + mapEvent.dir,"npc",400+drawX*50+xOffset,300+drawY*50+yOffset,g);
+							draw("map" + mapEvent.imageName + mapEvent.dir,"event",400+drawX*50+xOffset,300+drawY*50+yOffset,g);
 						}
 					}
 					else if(mapEvent.type == Event.INNKEEPER)
 					{
-						draw("map" + mapEvent.imageName + mapEvent.dir,"npc",400+drawX*50+xOffset,300+drawY*50+yOffset,g);
+						draw("map" + mapEvent.imageName + mapEvent.dir,"event",400+drawX*50+xOffset,300+drawY*50+yOffset,g);
 					}
 					else if(mapEvent.type == Event.CHEST)
 					{
 						//don't draw chests if they're unopened, hidden, and no party member has Cat Eyes
-						if(!(mapEvent.state == 0 && mapEvent.hidden && !partyHasEquippedPassiveSkill(PassiveSkill.CATEYES)))
+						if(!(mapEvent.state == 0 && mapEvent.hidden && !partyHasEquippedPassiveSkill(PassiveSkill.CATEYES)) && !mapEvent.invisible)
 						{
-							draw("mapChest" + mapEvent.state,400+drawX*50+xOffset,300+drawY*50+yOffset,g);
+							draw("mapChest" + mapEvent.state,"event",400+drawX*50+xOffset,300+drawY*50+yOffset,g);
 						}
 					}
 					else if(mapEvent.type == Event.ART)
 					{
-						draw("mapArt",400+drawX*50+xOffset,300+drawY*50+yOffset,g);
+						draw("mapArt","event",400+drawX*50+xOffset,300+drawY*50+yOffset,g);
 					}
 					else if(mapEvent.type == Event.SAVEPOINT)
 					{
-						draw("mapSavePoint",400+drawX*50+xOffset,300+drawY*50+yOffset,g);
+						draw("mapSavePoint","event",400+drawX*50+xOffset,300+drawY*50+yOffset,g);
 					}
 				}
 			}
@@ -4412,7 +4552,14 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		{
 			for(int i=0; i<coverPlayerThing.size(); i++)
 			{
-				drawThing(coverPlayerThing.get(i),coverPlayerX.get(i),coverPlayerY.get(i),g);
+				if(Thing.hasOwnTimer(coverPlayerThing.get(i)))
+				{
+					drawThing(coverPlayerThing.get(i),coverPlayerX.get(i),coverPlayerY.get(i),coverPlayerTimer.get(i),g);
+				}
+				else
+				{
+					drawThing(coverPlayerThing.get(i),coverPlayerX.get(i),coverPlayerY.get(i),0,g);
+				}
 			}
 		}
 	}
@@ -4426,9 +4573,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 	{
 		boolean newitem = true;
 		int itemIndex=0;
-		
-		System.out.println("Adding item " + item.name + " (" + item.qty + ")");
-		
+
 		if(item.id == Item.NOITEM)
 		{
 			return; //sanity check
@@ -4481,112 +4626,30 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		}
 	}
 	
-	public void loadData(String folder)
+	public void loadData()
 	{
-		//TODO
-		try
-		{
-			inputParty0 = new BufferedReader(new FileReader(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + folder + FileSeparator + "party0.txt"));
-			inputParty1 = new BufferedReader(new FileReader(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + folder + FileSeparator + "party1.txt"));
-			inputParty2 = new BufferedReader(new FileReader(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + folder + FileSeparator + "party2.txt"));
-			inputParty3 = new BufferedReader(new FileReader(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + folder + FileSeparator + "party3.txt"));
-			inputParty4 = new BufferedReader(new FileReader(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + folder + FileSeparator + "party4.txt"));
-			inputParty5 = new BufferedReader(new FileReader(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + folder + FileSeparator + "party5.txt"));
-			inputParty6 = new BufferedReader(new FileReader(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + folder + FileSeparator + "party6.txt"));
-			inputParty7 = new BufferedReader(new FileReader(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + folder + FileSeparator + "party7.txt"));
-			inputPosition = new BufferedReader(new FileReader(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + folder + FileSeparator + "position.txt"));
-			inputInventory = new BufferedReader(new FileReader(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + folder + FileSeparator + "inventory.txt"));
-			inputMaps = new BufferedReader(new FileReader(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + folder + FileSeparator + "maps.txt"));
-		}
-		catch(Exception e)
-		{
-			System.out.println("Error reading files.");
-		}
+		data = new Data[3];
 		
-		ArrayList savedParty0 = loadFile(inputParty0);
-		ArrayList savedParty1 = loadFile(inputParty1);
-		ArrayList savedParty2 = loadFile(inputParty2);
-		ArrayList savedParty3 = loadFile(inputParty3);
-		ArrayList savedParty4 = loadFile(inputParty4);
-		ArrayList savedParty5 = loadFile(inputParty5);
-		ArrayList savedParty6 = loadFile(inputParty6);
-		ArrayList savedParty7 = loadFile(inputParty7);
-		ArrayList savedPosition = loadFile(inputPosition);
-		ArrayList savedInventory = loadFile(inputInventory);
-		ArrayList savedMaps = loadFile(inputMaps);
-		
-		createInventory(savedInventory);
-		createPosition(savedPosition, savedMaps);
-		
-		party[0] = createCharacter(savedParty0,0);
-		party[1] = createCharacter(savedParty1,1);
-		party[2] = createCharacter(savedParty2,2);
-		party[3] = createCharacter(savedParty3,0);
-		party[4] = createCharacter(savedParty4,0);
-		party[5] = createCharacter(savedParty5,0);
-		party[6] = createCharacter(savedParty6,0);
-		party[7] = createCharacter(savedParty6,0);
-	}
-	
-	public boolean loadData()
-	{
-		String folder = "";
-		
-		boolean checkOld = false;
-		
-		try
-		{
-			inputPosition = new BufferedReader(new FileReader(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "position.txt"));
-			
-			ArrayList saved0 = loadFile(inputPosition);
-			
-			//check if the existing game data was saved (since a new game may have been started but wasn't saved)
-			String savedFlag = (String) saved0.get(6); //TODO
-			
-			if(!savedFlag.equals(""))
-			{
-				folder = "data";
-			}
-			else
-			{
-				checkOld = true;
-			}
-		}
-		catch(Exception e1)
-		{
-			checkOld = true;
-			
-			System.out.println("Failed to find saved data, checking backup data");
-		}
-		
-		if(checkOld)
+		for(int i=0; i<3; i++)
 		{
 			try
 			{
-				inputPosition = new BufferedReader(new FileReader(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "old" + FileSeparator + "position.txt"));
+				FileInputStream fileIn = new FileInputStream(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "data" + i + ".ser");
+				ObjectInputStream in = new ObjectInputStream(fileIn);
+				data[i] = (Data) in.readObject();
+				in.close();
+				fileIn.close();
 				
-				ArrayList savedPosition = loadFile(inputPosition);
-				
-				String savedFlag = (String) savedPosition.get(6); //TODO
-
-				if(!savedFlag.equals(""))
-				{
-					folder = "old";
-				}
+				System.out.println("Successfully read data[" + i + "]");
 			}
-			catch(Exception e2)
+			catch(Exception e)
 			{
-				System.out.println("No backup data exists, so we'll return false and start a new game");
+				data[i] = new Data();
+				
+				System.out.println(e.getMessage());
+				System.out.println("Failed to read data[" + i + "] at " + System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "data" + i + ".ser. Setting to new Data()");
 			}
 		}
-		
-		if(!folder.equals(""))
-		{
-			loadData(folder);
-			
-			return true;
-		}
-		else return false;
 	}
 	
 	public Unit createCharacter(ArrayList a, int index)
@@ -4735,15 +4798,10 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		return temp;
 	}
 	
-	public void createPosition(ArrayList position, ArrayList maps)
+	public void dataToLocal()
 	{
-		int saveFlag = Integer.parseInt((String)position.get(0));
-		
-		//Create maps		
 		map = new Map[Map.numMaps];
-		
 		int[] temp = Map.mapStates;
-
 		int n = 0;
 		for(int i=0; i<map.length; i++)
 		{
@@ -4752,7 +4810,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			{
 				try
 				{
-					aMap[j] = Integer.parseInt((String) maps.get(j+n));
+					aMap[j] = data[dataIndex].mapStates.get(j+n);
 				}
 				catch(Exception e)
 				{
@@ -4762,98 +4820,66 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			map[i] = new Map(aMap);
 			n += temp[i];
 		}
+
+		for(int i=0; i<data[dataIndex].party.length; i++)
+		{
+			if(data[dataIndex].party[i].id != Character.NONE)
+			{
+				party[i] = Unit.getCopyCharacter(data[dataIndex].party[i]);
+			}
+			else
+			{
+				party[i] = new None(i);
+			}
+		}
 		
-		int curMapID = Integer.parseInt((String) position.get(1));
-		
-		//Create position and respawn position
+		inventory = new ArrayList<Item>(data[dataIndex].inventory);
+		int curMapID = data[dataIndex].curMap;
 		curMap = Map.makeMap(curMapID,map[curMapID].states);
-		curX = Integer.parseInt((String) position.get(2));
-		curY = Integer.parseInt((String) position.get(3));
-		respawnMap = Integer.parseInt((String) position.get(4));
-		respawnX = Integer.parseInt((String) position.get(5));
-		respawnY = Integer.parseInt((String) position.get(6));
-		money = Integer.parseInt((String) position.get(7));
-		gameTime = Integer.parseInt((String) position.get(8));
+		curX = data[dataIndex].curX;
+		curY = data[dataIndex].curY;
+		respawnMap = data[dataIndex].respawnMap;
+		respawnX = data[dataIndex].respawnX;
+		respawnY = data[dataIndex].respawnY;
+		money = data[dataIndex].money;
+		gameTime = data[dataIndex].gameTime;
 		
-		curEvent = curMap.tile[curX][curY].event;
-		
-		direction = SOUTH;
+		dataLoaded = true;
 	}
 	
-	public void createInventory(ArrayList a)
+	public void localToData()
 	{
-		//Create inventory
-		inventory = new ArrayList<Item>();
-		
-		String itemString;
-		int itemID, qty;
-		for(int i=0; i<a.size(); i++)
+		for(int i=0; i<party.length; i++)
 		{
-			itemString = (String)a.get(i);
-			itemID = Integer.parseInt(itemString.split("-")[0]);
-			inventory.add(Item.itemFromID(itemID));
-			
-			try
+			if(party[i].id != Character.NONE)
 			{
-				qty = Integer.parseInt(itemString.split("-")[1]);
-				
-				inventory.get(i).qty = qty;
+				data[dataIndex].party[i] = Unit.getCopyCharacter(party[i]);
 			}
-			catch(Exception e)
+			else
 			{
-				inventory.get(i).qty = 1;
+				data[dataIndex].party[i] = new None(i);
 			}
 		}
-	}
-	
-	public void newGame()
-	{
-		try
+		
+		data[dataIndex].inventory = new ArrayList<Item>(inventory);
+		
+		data[dataIndex].mapStates = new ArrayList<Integer>(); 
+		for(int i=0; i<Map.numMaps; i++)
 		{
-			File file = new File(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party0.txt");
-			file.getParentFile().mkdirs();
-			file.getParentFile().setWritable(true);
-			
-			outputParty0 = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party0.txt"));
-			outputParty1 = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party1.txt"));
-			outputParty2 = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party2.txt"));
-			outputParty3 = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party3.txt"));
-			outputParty4 = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party4.txt"));
-			outputParty5 = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party5.txt"));
-			outputParty6 = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party6.txt"));
-			outputParty7 = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party7.txt"));
-			outputInventory = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "inventory.txt"));
-			outputPosition = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "position.txt"));
-			outputMaps = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "maps.txt"));
+			for(int j=0; j<Map.mapStates[i]; j++)
+			{
+				data[dataIndex].mapStates.add(map[i].states[j]);
+			}
 		}
-		catch(IOException e)
-		{
-			System.out.println("new game error: " + e.getMessage());
-			//System.exit(0);
-			
-			//After Permission Denied error, just continue into the game?
-			setState(MAP); //TODO: intro
-			playMapSong(false);
-		}
-
-		writeCharacter(new Brian(1,0),outputParty0);
-		writeCharacter(new None(1),outputParty1);
-		writeCharacter(new None(2),outputParty2);
-		writeCharacter(new None(0),outputParty3);
-		writeCharacter(new None(0),outputParty4);
-		writeCharacter(new None(0),outputParty5);
-		writeCharacter(new None(0),outputParty6);
-		writeCharacter(new None(0),outputParty7);
 		
-		inventory = new ArrayList<Item>();
-		writeInventory(outputInventory);
-		
-		writePositionNew(outputPosition);
-		
-		writeMapsNew(outputMaps);
-
-		setState(MAP); //TODO: intro
-		playMapSong(false);
+		data[dataIndex].curMap = curMap.id;
+		data[dataIndex].curX = curX;
+		data[dataIndex].curY = curY;
+		data[dataIndex].respawnMap = respawnMap;
+		data[dataIndex].respawnX = respawnX;
+		data[dataIndex].respawnY = respawnY;
+		data[dataIndex].money = money;
+		data[dataIndex].gameTime = gameTime;
 	}
 		
 	public void writeInventory(PrintWriter print)
@@ -5099,7 +5125,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					{
 						int value = battleAction.values.get(index);
 						
-						if(battleAction.action == Action.MURDER || battleAction.action == Action.MASSMURDER)
+						if(battleAction.action.id == Action.MURDER || battleAction.action.id == Action.MASSMURDER)
 						{
 							if(value == 1)
 							{
@@ -5116,9 +5142,9 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 							{
 								target.doDamage(value);
 								
-								if(target.status[Unit.SLEEP] > 0 && Action.actionFromID(battleAction.action).wakesUp())
+								if(target.status[STATUS_SLEEP] > 0 && Action.actionFromID(battleAction.action.id).wakesUp())
 								{
-									target.status[Unit.SLEEP] = 0;
+									target.status[STATUS_SLEEP] = 0;
 								}
 							}
 							else
@@ -5131,116 +5157,179 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				
 				if(target.hp > 0) //only care about inflicting status if the target is alive
 				{
-					if(battleAction.action == Action.BARF || battleAction.action == Action.VOMITERUPTION)
+					if(battleAction.action.id == Action.BARF || battleAction.action.id == Action.VOMITERUPTION)
 					{
 						if(battleAction.inflictStatus.get(i))
 						{
-							target.inflictStatus(Unit.POISON);
+							target.inflictStatus(STATUS_POISON);
 						}
 					}
-					else if(battleAction.action == Action.SHRIEK)
+					else if(battleAction.action.id == Action.SHRIEK)
 					{
 						if(battleAction.inflictStatus.get(i))
 						{
-							target.inflictStatus(Unit.SILENCE);
+							target.inflictStatus(STATUS_SILENCE);
 						}
 					}
-					else if(battleAction.action == Action.GOTTAGOFAST || battleAction.action == Action.GOTTAGOFASTER)
+					else if(battleAction.action.id == Action.GOTTAGOFAST || battleAction.action.id == Action.GOTTAGOFASTER)
 					{
 						if(battleAction.inflictStatus.get(i))
 						{
-							target.inflictStatus(Unit.HASTE,7);
+							target.inflictStatus(STATUS_HASTE,7);
 						}
 					}
-					else if(battleAction.action == Action.ANNOY)
+					else if(battleAction.action.id == Action.ANNOY)
 					{
 						if(battleAction.inflictStatus.get(i))
 						{
-							target.inflictStatus(Unit.BERSERK,7);
+							target.inflictStatus(STATUS_BERSERK,7);
 						}
 					}
-					else if(battleAction.action == Action.COWER)
+					else if(battleAction.action.id == Action.COWER)
 					{
 						if(battleAction.inflictStatus.get(i))
 						{
-							target.inflictStatus(Unit.DEFEND);
+							target.inflictStatus(STATUS_DEFEND);
 						}
 					}
-					else if(battleAction.action == Action.BLESSINGOFARINO)
+					else if(battleAction.action.id == Action.BLESSINGOFARINO)
 					{
+						int numTurns = 7;
+						if(battleAction.user.status[STATUS_AMP] == 1)
+						{
+							numTurns = 12;
+							battleAction.user.status[STATUS_AMP] = 0;
+						}
+						
 						if(battleAction.inflictStatus.get(i))
 						{
-							target.inflictStatus(Unit.ATKUP,7);
+							target.inflictStatus(STATUS_ATKUP,numTurns);
 						}
 					}
-					else if(battleAction.action == Action.SILLYDANCE)
+					else if(battleAction.action.id == Action.SOOTHINGSONG)
 					{
+						target.status[STATUS_POISON] = 0;
+						target.status[STATUS_SILENCE] = 0;
+						target.status[STATUS_BLIND] = 0;
+						target.status[STATUS_SLEEP] = 0;
+					}
+					else if(battleAction.action.id == Action.SILLYDANCE)
+					{
+						int numTurns = 7;
+						if(battleAction.user.status[STATUS_AMP] == 1)
+						{
+							numTurns = 12;
+							battleAction.user.status[STATUS_AMP] = 0;
+						}
+						
 						if(battleAction.inflictStatus.get(i))
 						{
-							target.inflictStatus(Unit.EVADE,7);
+							target.inflictStatus(STATUS_EVADE,numTurns);
 						}
 					}
-					else if(battleAction.action == Action.AMP)
+					else if(battleAction.action.id == Action.AMP)
 					{
 						if(battleAction.inflictStatus.get(i))
 						{
-							target.inflictStatus(Unit.AMP,7);
+							target.inflictStatus(STATUS_AMP);
 						}
 					}
-					else if(battleAction.action == Action.BAJABLAST)
+					else if(battleAction.action.id == Action.BAJABLAST)
 					{
 						if(battleAction.inflictStatus.get(i))
 						{
-							target.inflictStatus(Unit.SLOW,5);
+							target.inflictStatus(STATUS_SLOW,5);
 						}
 					}
-					else if(battleAction.action == Action.BLESSINGOFMIKU)
+					else if(battleAction.action.id == Action.BLESSINGOFMIKU)
 					{
+						int numTurns = 10;
+						if(battleAction.user.status[STATUS_AMP] == 1)
+						{
+							numTurns = 15;
+							battleAction.user.status[STATUS_AMP] = 0;
+						}
+						
 						if(battleAction.inflictStatus.get(i))
 						{
-							target.inflictStatus(Unit.REGEN,10);
+							target.inflictStatus(STATUS_REGEN,numTurns);
 						}
 					}
-					else if(battleAction.action == Action.BLUESHIELD || battleAction.action == Action.BLUEBARRIER)
+					else if(battleAction.action.id == Action.BLUESHIELD || battleAction.action.id == Action.BLUEBARRIER)
 					{
+						int numTurns = 7;
+						if(battleAction.user.status[STATUS_AMP] == 1)
+						{
+							numTurns = 12;
+							battleAction.user.status[STATUS_AMP] = 0;
+						}
+						
 						if(battleAction.inflictStatus.get(i))
 						{
-							target.inflictStatus(Unit.SHELL,7);
+							target.inflictStatus(STATUS_SHELL,numTurns);
 						}
 					}
-					else if(battleAction.action == Action.KAGESHADOWS)
+					else if(battleAction.action.id == Action.KAGESHADOWS)
 					{
 						if(battleAction.inflictStatus.get(i))
 						{
-							target.inflictStatus(Unit.BLIND,7);
+							target.inflictStatus(STATUS_BLIND,7);
 						}
 					}
-					else if(battleAction.action == Action.DEFENDHONOR || battleAction.action == Action.HONORFORALL)
+					else if(battleAction.action.id == Action.DEFENDHONOR || battleAction.action.id == Action.HONORFORALL)
 					{
 						if(battleAction.inflictStatus.get(i))
 						{
-							target.inflictStatus(Unit.PROTECT,7);
+							target.inflictStatus(STATUS_PROTECT,7);
 						}
 					}
-					else if(battleAction.action == Action.INFLICTSHAME)
+					else if(battleAction.action.id == Action.INFLICTSHAME)
 					{
 						if(battleAction.inflictStatus.get(i))
 						{
-							target.inflictStatus(Unit.SHAME,5);
+							target.inflictStatus(STATUS_SHAME,5);
 						}
 					}
-					else if(battleAction.action == Action.CATNAP)
+					else if(battleAction.action.id == Action.CATNAP)
 					{
 						if(battleAction.inflictStatus.get(i))
 						{
-							target.inflictStatus(Unit.SLEEP,5);
+							target.inflictStatus(STATUS_SLEEP,5);
 						}
 					}
-					else if(battleAction.action == Action.CATSCRATCH)
+					else if(battleAction.action.id == Action.CATSCRATCH)
 					{
 						if(battleAction.inflictStatus.get(i))
 						{
-							target.inflictStatus(Unit.BLIND);
+							target.inflictStatus(STATUS_BLIND);
+						}
+					}
+					else if(battleAction.action.id == Action.ROBOTTEARS)
+					{
+						if(battleAction.inflictStatus.get(i))
+						{
+							target.inflictStatus(STATUS_ATKDOWN,7);
+						}
+					}
+					else if(battleAction.action.id == Action.GOALKEEPER)
+					{
+						if(battleAction.inflictStatus.get(i))
+						{
+							target.inflictStatus(STATUS_GOALKEEPER);
+						}
+					}
+					else if(battleAction.action.id == Action.SQUIRTOIL)
+					{
+						if(battleAction.inflictStatus.get(i))
+						{
+							target.inflictStatus(STATUS_OIL,7);
+						}
+					}
+					else if(battleAction.action.id == Action.INSTALLVIRUS)
+					{
+						if(battleAction.inflictStatus.get(i))
+						{
+							target.inflictStatus(STATUS_VIRUS,7);
 						}
 					}
 					
@@ -5251,9 +5340,9 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					{
 						int statusChance = 20 + 3*battleAction.user.dex; //TODO: work on this formula
 
-						if(rand.nextInt(100) < target.getStatusChance(battleAction.user,Unit.POISON,statusChance))
+						if(rand.nextInt(100) < target.getStatusChance(battleAction.user,STATUS_POISON,statusChance))
 						{
-							target.inflictStatus(Unit.POISON);
+							target.inflictStatus(STATUS_POISON);
 						}
 					}
 
@@ -5261,9 +5350,9 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					{
 						int statusChance = 20 + 3*battleAction.user.dex; //TODO: work on this formula
 
-						if(rand.nextInt(100) < target.getStatusChance(battleAction.user,Unit.SILENCE,statusChance))
+						if(rand.nextInt(100) < target.getStatusChance(battleAction.user,STATUS_SILENCE,statusChance))
 						{
-							target.inflictStatus(Unit.SILENCE);
+							target.inflictStatus(STATUS_SILENCE);
 						}
 					}
 					
@@ -5271,9 +5360,9 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					{
 						int statusChance = 20 + 3*battleAction.user.dex; //TODO: work on this formula
 
-						if(rand.nextInt(100) < target.getStatusChance(battleAction.user,Unit.BLIND,statusChance))
+						if(rand.nextInt(100) < target.getStatusChance(battleAction.user,STATUS_BLIND,statusChance))
 						{
-							target.inflictStatus(Unit.BLIND);
+							target.inflictStatus(STATUS_BLIND);
 						}
 					}
 					
@@ -5281,9 +5370,9 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					{
 						int statusChance = 20 + 3*battleAction.user.dex; //TODO: work on this formula
 
-						if(rand.nextInt(100) < target.getStatusChance(battleAction.user,Unit.SLEEP,statusChance))
+						if(rand.nextInt(100) < target.getStatusChance(battleAction.user,STATUS_SLEEP,statusChance))
 						{
-							target.inflictStatus(Unit.SLEEP);
+							target.inflictStatus(STATUS_SLEEP);
 						}
 					}
 					
@@ -5291,9 +5380,9 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					{
 						int statusChance = 20 + 3*battleAction.user.dex; //TODO: work on this formula
 
-						if(rand.nextInt(100) < target.getStatusChance(battleAction.user,Unit.SLOW,statusChance))
+						if(rand.nextInt(100) < target.getStatusChance(battleAction.user,STATUS_SLOW,statusChance))
 						{
-							target.inflictStatus(Unit.SLOW);
+							target.inflictStatus(STATUS_SLOW);
 						}
 					}
 					
@@ -5301,9 +5390,9 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					{
 						int statusChance = 20 + 3*battleAction.user.dex; //TODO: work on this formula
 
-						if(rand.nextInt(100) < target.getStatusChance(battleAction.user,Unit.BERSERK,statusChance))
+						if(rand.nextInt(100) < target.getStatusChance(battleAction.user,STATUS_BERSERK,statusChance))
 						{
-							target.inflictStatus(Unit.BERSERK);
+							target.inflictStatus(STATUS_BERSERK);
 						}
 					}
 					
@@ -5311,14 +5400,14 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					{
 						int statusChance = 20 + 3*battleAction.user.dex; //TODO: work on this formula
 
-						if(rand.nextInt(100) < target.getStatusChance(battleAction.user,Unit.SHAME,statusChance))
+						if(rand.nextInt(100) < target.getStatusChance(battleAction.user,STATUS_SHAME,statusChance))
 						{
-							target.inflictStatus(Unit.SHAME);
+							target.inflictStatus(STATUS_SHAME);
 						}
 					}
 				}
 				
-				else if(battleAction.action == Action.STEAL)
+				else if(battleAction.action.id == Action.STEAL)
 				{
 					if(battleAction.item != null)
 					{
@@ -5329,7 +5418,16 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 						addToInventory(battleAction.item);
 					}
 				}
+				else if(battleAction.action.id == Action.EJECTMONEY)
+				{
+					//TODO: spend the money
+				}
 			}
+		}
+		
+		if(battleAction != null)
+		{
+			battleAction.user.actionHistory.add(battleAction.action.id);
 		}
 		
 		battleAction = null;
@@ -5341,7 +5439,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			repaint();
 		}
 
-		if(currentUnit.status[Unit.POISON] < 0)
+		if(currentUnit.status[STATUS_POISON] < 0)
 		{
 			setState(BATTLEEFFECT);
 			repaint();
@@ -5351,7 +5449,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			
 			doBattleCalculations(currentUnit, Action.POISON, targets);
 		}
-		else if(currentUnit.status[Unit.REGEN] < 0)
+		else if(currentUnit.status[STATUS_REGEN] < 0)
 		{
 			setState(BATTLEEFFECT);
 			repaint();
@@ -5369,8 +5467,10 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			
 			if(currentUnit.unitType == Unit.MONSTER)
 			{
-				action = getMonsterAction(currentUnit);
-				targets = getMonsterTargets(currentUnit, action);
+				MonsterAction monsterAction = monsters.get(currentUnit.index).getAction(party, monsters);
+				
+				action = monsterAction.action;
+				targets = monsterAction.targets;
 			}
 			else //Berserk
 			{
@@ -5387,76 +5487,6 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			index.clear();
 			addIndex(0);
 		}
-	}
-	
-	public int getMonsterAction(Unit monster)
-	{
-		int id = monster.id;
-		int action = Action.ATTACK; //default
-		
-		if(monster.status[Unit.SILENCE] == 1 || monster.status[Unit.BERSERK] > 0) return Action.ATTACK;
-		
-		//TODO: have actual AI instead of just choosing randomly (if the monster's smart)
-		
-		if(id == Monster.SNAKE)
-		{
-			int r = rand.nextInt(3);
-			if(r == 0) action = Action.ATTACK;
-			else if(r == 1) action = Action.LIGHTNINGBOLT;
-			else action = Action.MTNDEWWAVE;
-		}
-		
-		return action;
-	}
-	
-	public ArrayList<Integer> getMonsterTargets(Unit monster, int action)
-	{
-		ArrayList<Integer> targets = new ArrayList<Integer>();
-		
-		ArrayList<Integer> existingPlayerTargets = new ArrayList<Integer>();
-		for(int i=0; i<3; i++)
-		{
-			if(party[i].existsAndAlive()) existingPlayerTargets.add(i);
-		}
-		
-		ArrayList<Integer> existingMonsterTargets = new ArrayList<Integer>();
-		for(int i=0; i<monsters.size(); i++)
-		{
-			if(monsters.get(i).hp > 0) existingMonsterTargets.add(i+3);
-		}
-		
-		int targetType = Action.actionFromID(action).targetType;
-		
-		if(targetType == Action.ONEENEMY)
-		{
-			int target = existingPlayerTargets.get(rand.nextInt(existingPlayerTargets.size()));
-			
-			targets.add(target);
-		}
-		else if(targetType == Action.ALLENEMIES)
-		{
-			targets = existingPlayerTargets;
-		}
-		else if(targetType == Action.ONEALLY) //TODO: add some actual logic here?
-		{
-			int target = existingMonsterTargets.get(rand.nextInt(existingMonsterTargets.size()));
-			
-			targets.add(target);
-		}
-		else if(targetType == Action.SELF)
-		{
-			targets.add(monster.getBattleIndex());
-		}
-		else if(targetType == Action.ALLALLIES)
-		{
-			targets = existingMonsterTargets;
-		}
-		else if(targetType == Action.ONEUNIT)
-		{
-			//TODO: any use case?
-		}
-		
-		return targets;
 	}
 	
 	public int getRandomMonsterIndex()
@@ -5521,14 +5551,14 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 							party[i].clearFlags();
 						}
 						
-						if(party[i].status[Unit.SLEEP] > 0)
+						if(party[i].status[STATUS_SLEEP] > 0)
 						{
 							party[i].resetCT();
-							party[i].status[Unit.SLEEP]--;
+							party[i].status[STATUS_SLEEP]--;
 						}
 						else
 						{
-							boolean berserk = (party[i].status[Unit.BERSERK] > 0); 
+							boolean berserk = (party[i].status[STATUS_BERSERK] > 0); 
 							
 							party[i].decrementStatuses();
 
@@ -5556,10 +5586,10 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 							monsters.get(i).clearFlags();
 						}
 						
-						if(monsters.get(i).status[Unit.SLEEP] > 0)
+						if(monsters.get(i).status[STATUS_SLEEP] > 0)
 						{
 							monsters.get(i).resetCT();
-							monsters.get(i).status[Unit.SLEEP]--;
+							monsters.get(i).status[STATUS_SLEEP]--;
 						}
 						else
 						{
@@ -5602,7 +5632,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		Item usedItem = null;
 		
 		//for Mysterious Melody
-		int element = NOELEMENT; //for Mysterious Melody
+		int element = ELEMENT_NONE; //for Mysterious Melody
 		
 		//for Steal
 		Item stealItem = null; //for Steal
@@ -5625,7 +5655,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			animation[user.getBattleIndex()] = ATTACK;
 			for(int i=0; i<targets.size(); i++)
 			{
-				if(values.get(i) > 0) animation[targets.get(i)] = DAMAGED;
+				if(values.get(i) > 0) animation[targets.get(i)] = DAMAGED; //TODO: only show the DAMAGED animation while damage is showing?
 			}
 			
 			if(user.hasEquippedPassiveSkill(PassiveSkill.DRAINLIFE))
@@ -5655,7 +5685,8 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				|| action == Action.BARF || action == Action.FLAIL || action == Action.SHRIEK || action == Action.KAMIKAZE || action == Action.VOMITERUPTION || action == Action.SUMMONTRAINS
 				|| action == Action.BAJABLAST || action == Action.MYSTERIOUSMELODY || action == Action.SHURIKEN || action == Action.NINJUTSUSLICE || action == Action.SAMURAISLASH
 				|| action == Action.BUSHIDOBLADE || action == Action.MURAMASAMARA || action == Action.FIRE || action == Action.BIGFIRE || action == Action.LIGHTNINGBOLT
-				|| action == Action.LIGHTNINGSTORM || action == Action.DEVOUR || action == Action.EARTHSPIKE || action == Action.EARTHQUAKE || action == Action.CATSCRATCH)
+				|| action == Action.LIGHTNINGSTORM || action == Action.DEVOUR || action == Action.EARTHSPIKE || action == Action.EARTHQUAKE || action == Action.CATSCRATCH
+				|| action == Action.DISCHARGE || action == Action.EJECTMONEY || action == Action.MALFUNCTION || action == Action.OVERLOAD || action == Action.ROBOTBEAM)
 		{
 			for(int i=0; i<targets.size(); i++)
 			{
@@ -5677,7 +5708,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				
 				if(action == Action.BARF || action == Action.VOMITERUPTION)
 				{
-					if(rand.nextInt(100) < getUnitFromTargetIndex(targets.get(i)).getStatusChance(user,Unit.POISON,40))
+					if(rand.nextInt(100) < getUnitFromTargetIndex(targets.get(i)).getStatusChance(user,STATUS_POISON,40))
 					{
 						inflictArray.add(true);
 					}
@@ -5685,7 +5716,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				}
 				else if(action == Action.SHRIEK)
 				{
-					if(rand.nextInt(100) < getUnitFromTargetIndex(targets.get(i)).getStatusChance(user,Unit.SILENCE,60))
+					if(rand.nextInt(100) < getUnitFromTargetIndex(targets.get(i)).getStatusChance(user,STATUS_SILENCE,60))
 					{
 						inflictArray.add(true);
 					}
@@ -5693,7 +5724,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				}
 				else if(action == Action.BAJABLAST)
 				{
-					if(rand.nextInt(100) < getUnitFromTargetIndex(targets.get(i)).getStatusChance(user,Unit.SLOW,60))
+					if(rand.nextInt(100) < getUnitFromTargetIndex(targets.get(i)).getStatusChance(user,STATUS_SLOW,60))
 					{
 						inflictArray.add(true);
 					}
@@ -5701,7 +5732,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				}
 				else if(action == Action.CATSCRATCH)
 				{
-					if(rand.nextInt(100) < getUnitFromTargetIndex(targets.get(i)).getStatusChance(user,Unit.BLIND,60))
+					if(rand.nextInt(100) < getUnitFromTargetIndex(targets.get(i)).getStatusChance(user,STATUS_BLIND,60))
 					{
 						inflictArray.add(true);
 					}
@@ -5710,7 +5741,8 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				else inflictArray.add(false);
 			}
 			
-			if(action == Action.CHEEZITBLAST || action == Action.BARF || action == Action.SUMMONTRAINS || action == Action.PURR || action == Action.CATNAP) //TODO: enhance Vomit Eruption
+			if(action == Action.CHEEZITBLAST || action == Action.BARF || action == Action.SUMMONTRAINS || action == Action.PURR || action == Action.CATNAP
+					|| action == Action.GOALKEEPER || action == Action.ROBOTBEAM) //TODO: enhance Vomit Eruption  TODO: Goalkeeper animation  TODO: Robot Beam + other KevBot skills?
 			{
 				animation[user.getBattleIndex()] = action;
 			}
@@ -5756,10 +5788,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				}
 			}
 			
-			if(user.unitType == Unit.CHARACTER)
-			{
-				user.mp -= Action.actionFromID(action).getMPCost(user);
-			}
+			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).getMPCost(user);
 		}
 		
 		/**
@@ -5769,15 +5798,16 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		{
 			Unit target = getUnitFromTargetIndex(targets.get(0));
 			
-			if(!target.murderable)
+			if(target.statusResistance[STATUS_DEATH] == 100)
 			{
 				values.add(-1); //-1 = can't murder
 			}
-			else //TODO: work on this formula
+			else
 			{
-				double dmurderChance = 20 + 5*(currentUnit.level - target.level) + 7*(currentUnit.dex - target.dex);
+				double dmurderChance = 20 + 5*(currentUnit.level - target.level) + 7*(currentUnit.dex - target.dex); //TODO: work on this
 				if(dmurderChance < 0) dmurderChance = 0;
 				dmurderChance *= (3.0 - 2.0*((double)target.hp/target.maxHp));
+				dmurderChance *= ((100.0 - target.statusResistance[STATUS_DEATH])/100.0);
 				
 				if(rand.nextInt(100) < dmurderChance)
 				{
@@ -5801,15 +5831,16 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			{
 				Unit target = getUnitFromTargetIndex(targets.get(i));
 				
-				if(!target.murderable)
+				if(target.statusResistance[STATUS_DEATH] == 100)
 				{
 					values.add(-1); //-1 = can't murder
 				}
 				else
 				{
-					double dmurderChance = 20 + 5*(currentUnit.level - target.level) + 7*(currentUnit.dex - target.dex);
+					double dmurderChance = 20 + 5*(currentUnit.level - target.level) + 7*(currentUnit.dex - target.dex); //TODO: work on this
 					if(dmurderChance < 0) dmurderChance = 0;
 					dmurderChance *= (3.0 - 2.0*((double)target.hp/target.maxHp));
+					dmurderChance *= ((100.0 - target.statusResistance[STATUS_DEATH])/100.0);
 					
 					if(rand.nextInt(100) < dmurderChance)
 					{
@@ -5859,9 +5890,16 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		}
 		else if(action == Action.RADICALRIFF) //TODO: work on this formula
 		{
+			double mod = 1.0;
+			if(user.status[Game.STATUS_AMP] == 1)
+			{
+				mod = 1.5;
+				user.status[Game.STATUS_AMP] = 0; 
+			}
+			
 			for(int i=0; i<targets.size(); i++)
 			{
-				double dhealAmt = 10 + user.mag;
+				double dhealAmt = mod*(10 + user.mag);
 				dhealAmt = randomize(dhealAmt,user.getDmgLowerBound(),100);
 				
 				int healAmt = (int) dhealAmt;
@@ -5874,12 +5912,24 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		}
 		else if(action == Action.CHIPTUNEOFLIFE)
 		{
+			double basePercent = 0.25;
+			if(user.status[Game.STATUS_AMP] == 1)
+			{
+				basePercent = 0.5;
+				user.status[Game.STATUS_AMP] = 0; 
+			}
+			
 			if(getUnitFromTargetIndex(targets.get(0)).hp == 0)
 			{
-				double dhealAmt = (getUnitFromTargetIndex(targets.get(0)).maxHp * 0.10) + (user.dex * 2.0) + (user.mag * 3.0);
+				double dhealAmt = (getUnitFromTargetIndex(targets.get(0)).maxHp * basePercent) + (user.dex * 2.0) + (user.mag * 3.0);
 				dhealAmt = randomize(dhealAmt,85,100);
 				
 				int healAmt = (int) dhealAmt;
+				if(healAmt > getUnitFromTargetIndex(targets.get(0)).maxHp)
+				{
+					healAmt = getUnitFromTargetIndex(targets.get(0)).maxHp;
+				}
+				
 				values.add(healAmt * -1);
 			}
 			else
@@ -5900,7 +5950,6 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			
 			int healAmt = (int) dhealAmt;
 			values.add(healAmt * -1);
-			
 			mp.add(false);
 			
 			//MP part
@@ -5909,8 +5958,28 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			
 			healAmt = (int) dhealAmt;
 			values.add(healAmt);
-			
 			mp.add(true);
+			
+			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).getMPCost(user);
+		}
+		else if(action == Action.SYSTEMREBOOT)
+		{
+			if(rand.nextInt(2) == 0)
+			{
+				System.out.println("miss");
+				missArray.add(true);
+				
+				values.add(0);
+				mp.add(false);
+			}
+			else
+			{
+				System.out.println("success");
+				int healAmt = user.maxHp - user.hp;
+				values.add(healAmt * -1);
+				
+				mp.add(false);
+			}
 			
 			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).getMPCost(user);
 		}
@@ -5922,7 +5991,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		{
 			for(int i=0; i<targets.size(); i++)
 			{
-				if(getUnitFromTargetIndex(targets.get(i)).status[Unit.HASTE] == 0)
+				if(getUnitFromTargetIndex(targets.get(i)).status[STATUS_HASTE] == 0)
 				{
 					inflictArray.add(true);
 					missArray.add(false);
@@ -5938,10 +6007,10 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		}
 		else if(action == Action.ANNOY)
 		{
-			int rate = 90;
-			if(user.unitType == getUnitFromTargetIndex(targets.get(0)).unitType) rate = 200;  
+			int rate = 85;
+			if(user.unitType == getUnitFromTargetIndex(targets.get(0)).unitType) rate = 100;  
 			
-			if(rand.nextInt(100) < getUnitFromTargetIndex(targets.get(0)).getStatusChance(user,Unit.BERSERK,rate))
+			if(rand.nextInt(100) < getUnitFromTargetIndex(targets.get(0)).getStatusChance(user,STATUS_BERSERK,rate))
 			{
 				inflictArray.add(true);
 				missArray.add(false);
@@ -5956,7 +6025,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		}
 		else if(action == Action.COWER)
 		{
-			if(getUnitFromTargetIndex(targets.get(0)).status[Unit.DEFEND] == 0)
+			if(getUnitFromTargetIndex(targets.get(0)).status[STATUS_DEFEND] == 0)
 			{
 				inflictArray.add(true);
 				missArray.add(false);
@@ -5971,7 +6040,23 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		}
 		else if(action == Action.BLESSINGOFARINO)
 		{
-			if(getUnitFromTargetIndex(targets.get(0)).status[Unit.ATKUP] == 0)
+			if(getUnitFromTargetIndex(targets.get(0)).status[STATUS_ATKUP] == 0)
+			{
+				inflictArray.add(true);
+				missArray.add(false);
+			}
+			else
+			{
+				inflictArray.add(false);
+				missArray.add(true);
+			}
+			
+			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).getMPCost(user);
+		}
+		else if(action == Action.SOOTHINGSONG)
+		{
+			Unit target = getUnitFromTargetIndex(targets.get(0));
+			if(target.status[STATUS_POISON] != 0 || target.status[STATUS_SILENCE] != 0 || target.status[STATUS_BLIND] != 0 || target.status[STATUS_SLEEP] != 0)
 			{
 				inflictArray.add(true);
 				missArray.add(false);
@@ -5986,7 +6071,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		}
 		else if(action == Action.SILLYDANCE)
 		{
-			if(getUnitFromTargetIndex(targets.get(0)).status[Unit.EVADE] == 0)
+			if(getUnitFromTargetIndex(targets.get(0)).status[STATUS_EVADE] == 0)
 			{
 				inflictArray.add(true);
 				missArray.add(false);
@@ -6001,7 +6086,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		}
 		else if(action == Action.AMP)
 		{
-			if(getUnitFromTargetIndex(targets.get(0)).status[Unit.AMP] == 0)
+			if(getUnitFromTargetIndex(targets.get(0)).status[STATUS_AMP] == 0)
 			{
 				inflictArray.add(true);
 				missArray.add(false);
@@ -6018,7 +6103,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		{
 			for(int i=0; i<targets.size(); i++)
 			{
-				if(getUnitFromTargetIndex(targets.get(i)).status[Unit.REGEN] == 0)
+				if(getUnitFromTargetIndex(targets.get(i)).status[STATUS_REGEN] == 0)
 				{
 					inflictArray.add(true);
 					missArray.add(false);
@@ -6036,7 +6121,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		{
 			for(int i=0; i<targets.size(); i++)
 			{
-				if(getUnitFromTargetIndex(targets.get(i)).status[Unit.SHELL] == 0)
+				if(getUnitFromTargetIndex(targets.get(i)).status[STATUS_SHELL] == 0)
 				{
 					inflictArray.add(true);
 					missArray.add(false);
@@ -6054,7 +6139,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		{
 			for(int i=0; i<targets.size(); i++)
 			{
-				if(rand.nextInt(100) < getUnitFromTargetIndex(targets.get(i)).getStatusChance(user,Unit.BLIND,70))
+				if(rand.nextInt(100) < getUnitFromTargetIndex(targets.get(i)).getStatusChance(user,STATUS_BLIND,70))
 				{
 					inflictArray.add(true);
 					missArray.add(false);
@@ -6072,7 +6157,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		{
 			for(int i=0; i<targets.size(); i++)
 			{
-				if(getUnitFromTargetIndex(targets.get(i)).status[Unit.PROTECT] == 0)
+				if(getUnitFromTargetIndex(targets.get(i)).status[STATUS_PROTECT] == 0)
 				{
 					inflictArray.add(true);
 					missArray.add(false);
@@ -6088,7 +6173,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		}
 		else if(action == Action.INFLICTSHAME)
 		{
-			if(getUnitFromTargetIndex(targets.get(0)).status[Unit.SHAME] == 0)
+			if(rand.nextInt(100) < getUnitFromTargetIndex(targets.get(0)).getStatusChance(user,STATUS_SHAME,85))
 			{
 				inflictArray.add(true);
 				missArray.add(false);
@@ -6103,7 +6188,70 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		}
 		else if(action == Action.CATNAP)
 		{
-			if(getUnitFromTargetIndex(targets.get(0)).status[Unit.SLEEP] == 0)
+			if(rand.nextInt(100) < getUnitFromTargetIndex(targets.get(0)).getStatusChance(user,STATUS_SLEEP,85))
+			{
+				inflictArray.add(true);
+				missArray.add(false);
+			}
+			else
+			{
+				inflictArray.add(false);
+				missArray.add(true);
+			}
+			
+			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).getMPCost(user);
+		}
+		else if(action == Action.ROBOTTEARS)
+		{
+			if(rand.nextInt(100) < getUnitFromTargetIndex(targets.get(0)).getStatusChance(user,STATUS_ATKDOWN,85))
+			{
+				inflictArray.add(true);
+				missArray.add(false);
+			}
+			else
+			{
+				inflictArray.add(false);
+				missArray.add(true);
+			}
+			
+			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).getMPCost(user);
+		}
+		else if(action == Action.GOALKEEPER)
+		{
+			if(getUnitFromTargetIndex(targets.get(0)).status[STATUS_GOALKEEPER] == 0)
+			{
+				inflictArray.add(true);
+				missArray.add(false);
+			}
+			else
+			{
+				inflictArray.add(false);
+				missArray.add(true);
+			}
+			
+			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).getMPCost(user);
+		}
+		else if(action == Action.SQUIRTOIL)
+		{
+			for(int i=0; i<targets.size(); i++)
+			{
+				if(rand.nextInt(100) < getUnitFromTargetIndex(targets.get(i)).getStatusChance(user,STATUS_OIL,85))
+				{
+					inflictArray.add(true);
+					missArray.add(false);
+				}
+				else
+				{
+					inflictArray.add(false);
+					missArray.add(true);
+				}
+			}
+			
+			if(user.unitType == Unit.CHARACTER) user.mp -= Action.actionFromID(action).getMPCost(user);
+		}
+		else if(action == Action.INSTALLVIRUS)
+		{
+			if(rand.nextInt(100) < getUnitFromTargetIndex(targets.get(0)).getStatusChance(user,STATUS_VIRUS,85))
 			{
 				inflictArray.add(true);
 				missArray.add(false);
@@ -6226,10 +6374,10 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			mp.add(false);
 		}
 		
-		battleAction = new BattleAction(user,action,targets,values,mp,animation,critArray,missArray,inflictArray);
+		battleAction = new BattleAction(user,Action.actionFromID(action),targets,values,mp,animation,critArray,missArray,inflictArray);
 		battleAction.element = element;
 		
-		if(battleAction.action == Action.STEAL)
+		if(battleAction.action.id == Action.STEAL)
 		{
 			battleAction.item = stealItem;
 			battleAction.stealOutcome = stealOutcome;
@@ -6281,43 +6429,22 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		return list;
     }
 	
-	public void saveGame(String folder)
+	public void saveGame()
 	{
-		//TODO
+		localToData();
+		
 		try
 		{
-			File file = new File(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + folder + FileSeparator + "party0.txt");
-			file.getParentFile().mkdirs();
-			
-			outputParty0 = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party0.txt"));
-			outputParty1 = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party1.txt"));
-			outputParty2 = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party2.txt"));
-			outputParty3 = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party3.txt"));
-			outputParty4 = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party4.txt"));
-			outputParty5 = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party5.txt"));
-			outputParty6 = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party6.txt"));
-			outputParty7 = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "party7.txt"));
-			outputInventory = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "inventory.txt"));
-			outputPosition = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "position.txt"));
-			outputMaps = new PrintWriter(new FileWriter(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "maps.txt"));
+			FileOutputStream fileOut = new FileOutputStream(System.getProperty("user.home") + FileSeparator + "BrianQuest2" + FileSeparator + "data" + FileSeparator + "data" + dataIndex + ".ser");
+			ObjectOutputStream out = new ObjectOutputStream(fileOut);
+			out.writeObject(data[dataIndex]);
+			out.close();
+			fileOut.close();
 		}
-		catch(IOException e)
+		catch(Exception e)
 		{
-			System.out.println("saveGame() - " + e.getMessage());
+			e.printStackTrace();
 		}
-
-		writeCharacter(party[0],outputParty0);
-		writeCharacter(party[1],outputParty1);
-		writeCharacter(party[2],outputParty2);
-		writeCharacter(party[3],outputParty3);
-		writeCharacter(party[4],outputParty4);
-		writeCharacter(party[5],outputParty5);
-		writeCharacter(party[6],outputParty6);
-		writeCharacter(party[7],outputParty7);
-		
-		writeInventory(outputInventory);
-		writePosition(outputPosition);
-		writeMaps(outputMaps);
 	}
 	
 	public Tile tileFaced()
@@ -6364,10 +6491,8 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		return 0;
 	}
 		
-	public String gameTimeString()
+	public String gameTimeString(int time)
 	{
-		int time = gameTime;
-		
 		int hours = time/3600;
 		time = time - hours*3600;
 		int minutes = time/60;
@@ -6457,7 +6582,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			{
 				move = false;
 			}
-			else if(curMap.tile[curX][curY-1].walkable)
+			else if(curY-1 >= 0 && curMap.tile[curX][curY-1].walkable)
 			{
 				move = true;
 				
@@ -6469,7 +6594,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		{
 			direction = EAST;
 			
-			if(curMap.tile[curX+1][curY].walkable)
+			if(curX+1 < curMap.getWidth()-1 && curMap.tile[curX+1][curY].walkable)
 			{
 				move = true;
 				
@@ -6481,11 +6606,11 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		{
 			direction = SOUTH;
 			
-			if(curMap.tile[curX][curY+1].type == Tile.SNOWWALLNORTH && curMap.tile[curX][curY+1].thing.type != Thing.MOUNTAINCAVEENTRANCE2)
+			if(curY+1 < curMap.getHeight()-1 && curMap.tile[curX][curY+1].type == Tile.SNOWWALLNORTH && curMap.tile[curX][curY+1].thing.type != Thing.MOUNTAINCAVEENTRANCE2)
 			{
 				move = false;
 			}
-			else if(curMap.tile[curX][curY+1].walkable)
+			else if(curY+1 < curMap.getHeight()-1 && curMap.tile[curX][curY+1].walkable)
 			{
 				move = true;
 				
@@ -6497,7 +6622,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		{
 			direction = WEST;
 			
-			if(curMap.tile[curX-1][curY].walkable)
+			if(curX-1 >= 0 && curMap.tile[curX-1][curY].walkable)
 			{
 				move = true;
 				
@@ -6529,13 +6654,6 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				}
 				
 				walkLoop();
-			}
-
-			steps++;
-			
-			if(steps%250 == 0)
-			{
-				saveGame("data_backup");
 			}
 			
 			if(curMap.tile[curX][curY].event.type == Event.PORTAL)
@@ -6581,14 +6699,14 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					monsters = curMap.getMonsters(curMap.tile[curX][curY].monsterListID);
 					for(int i=0; i<monsters.size(); i++)
 					{
-						monsters.get(i).resetCT();
+						monsters.get(i).resetBeforeBattle();
 					}
 					
-					for(int i=0; i<2; i++)
+					for(int i=0; i<3; i++)
 					{
 						if(party[i].id != Character.NONE)
 						{
-							party[i].resetCT();
+							party[i].resetBeforeBattle();
 						}
 					}
 					
@@ -6609,27 +6727,27 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 						{
 							if(party[i].hasEquippedPassiveSkill(PassiveSkill.AUTOREGEN))
 							{
-								party[i].inflictStatus(Unit.REGEN,10);
+								party[i].inflictStatus(STATUS_REGEN,10);
 							}
 							
 							if(party[i].hasEquippedPassiveSkill(PassiveSkill.AUTOHASTE))
 							{
-								party[i].inflictStatus(Unit.HASTE,7);
+								party[i].inflictStatus(STATUS_HASTE,7);
 							}
 							
 							if(party[i].hasEquippedPassiveSkill(PassiveSkill.AUTOBERSERK))
 							{
-								party[i].inflictStatus(Unit.BERSERK,7);
+								party[i].inflictStatus(STATUS_BERSERK,7);
 							}
 							
 							if(party[i].hasEquippedPassiveSkill(PassiveSkill.AUTOPROTECT))
 							{
-								party[i].inflictStatus(Unit.PROTECT,7);
+								party[i].inflictStatus(STATUS_PROTECT,7);
 							}
 							
 							if(party[i].hasEquippedPassiveSkill(PassiveSkill.AUTOSHELL))
 							{
-								party[i].inflictStatus(Unit.SHELL,7);
+								party[i].inflictStatus(STATUS_SHELL,7);
 							}
 						}
 					}
@@ -6766,7 +6884,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		{
 			pressedSpace();
 		}
-		/*else if(evt.getKeyCode() == KeyEvent.VK_ENTER) //TODO: remove this and other cheats in "finished" game
+		else if(evt.getKeyCode() == KeyEvent.VK_ENTER) //TODO: remove this and other cheats in "finished" game
 		{
 			if(direction == NORTH) curY--;
 			else if(direction == EAST) curX++;
@@ -6774,7 +6892,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			else if(direction == WEST) curX--;
 			
 			System.out.println("coord: " + curX + "," + curY);
-		}*/
+		}
 		else if(evt.getKeyCode() == KeyEvent.VK_I)
 		{
 			if(money < 1000000) money += 1000;
@@ -6784,10 +6902,15 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			if(party[1].id == Character.NONE && party[3].id == Character.NONE)
 			{
 				party[3] = new Alex(1,0);
-				party[4] = new Ryan(1,0);
+				party[4] = new Hank(1,0);
 				party[5] = new Mychal(1,0);
 				party[6] = new Kitten(1,0);
+				party[7] = new KevBot(1,0);
 			}
+		}
+		else if(evt.getKeyCode() == KeyEvent.VK_Q)
+		{
+			party[2] = new KevBot(1,2);
 		}
 		else if(evt.getKeyCode() == KeyEvent.VK_O)
 		{
@@ -6820,12 +6943,13 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					party[i].activeSkills.add(new ActiveVomitEruption(25,true));
 					party[i].activeSkills.add(new ActiveSummonTrains(25,true));
 				}
-				else if(party[i].id == Character.RYAN)
+				else if(party[i].id == Character.HANK)
 				{
 					party[i].activeSkills = new ArrayList<ActiveSkill>();
 					party[i].activeSkills.add(new ActiveBlessingOfArino(25,true));
 					party[i].activeSkills.add(new ActiveBlessingOfMiku(25,true));
 					party[i].activeSkills.add(new ActiveMysteriousMelody(25,true));
+					party[i].activeSkills.add(new ActiveSoothingSong(25,true));
 					party[i].activeSkills.add(new ActiveBajaBlast(25,true));
 					party[i].activeSkills.add(new ActiveBlueShield(25,true));
 					party[i].activeSkills.add(new ActiveBlueBarrier(25,true));
@@ -6861,6 +6985,19 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					party[i].activeSkills.add(new ActiveCatNap(25,true));
 					party[i].activeSkills.add(new ActiveCatScratch(25,true));
 					party[i].activeSkills.add(new ActiveDevour(25,true));
+				}
+				else if(party[i].id == Character.KEVBOT)
+				{
+					party[i].activeSkills = new ArrayList<ActiveSkill>();
+					party[i].activeSkills.add(new ActiveDischarge(25,true));
+					party[i].activeSkills.add(new ActiveRobotTears(25,true));
+					party[i].activeSkills.add(new ActiveEjectMoney(25,true));
+					party[i].activeSkills.add(new ActiveSystemReboot(25,true));
+					party[i].activeSkills.add(new ActiveMalfunction(25,true));
+					party[i].activeSkills.add(new ActiveOverload(25,true));
+					party[i].activeSkills.add(new ActiveSquirtOil(25,true));
+					party[i].activeSkills.add(new ActiveInstallVirus(25,true));
+					party[i].activeSkills.add(new ActiveRobotBeam(25,true));
 				}
 			}
 			
@@ -6971,7 +7108,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				{
 					setState(GAMESAVED);
 					
-					saveGame("data");
+					saveGame();
 					playSound("saveGame");
 				}
 			}
@@ -7065,11 +7202,12 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				
 				curEvent = tileFaced().event;
 				
-				addIndex(0);
-				
 				addToInventory(curEvent.item);
-				
 				playSound("item");
+				
+				curEvent.state = 1;
+				
+				addIndex(0);
 			}
 			else if(tileFaced().event.type == Event.ART)
 			{
@@ -7084,7 +7222,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			{
 				if(curEvent.type == Event.CHEST)
 				{
-					curMap.tile[curEvent.x][curEvent.y].openChest();
+					//curMap.tile[curEvent.x][curEvent.y].openChest();
 					
 					curMap.recalculateStates();
 					
@@ -7114,8 +7252,6 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		}
 		else if(state == INVENTORYSORT)
 		{
-			System.out.println("curIndex() = " + curIndex());
-			
 			if(curIndex() == 0)
 			{
 				Collections.sort(inventory, new CompareID());
@@ -7315,27 +7451,25 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		}
 		else if(state == TITLESCREEN)
 		{
-			if(curIndex() == 1) //New Game
+			setState(DATASELECT1);
+			
+			boolean hasExistingData = false;;
+			
+			for(int i=0; i<3; i++)
 			{
-				if(loadData()) saveGame("old");
-				
-				newGame();
-				loadData("data"); //load the new data
-				
-				addIndex(0);
+				if(data[i].dataExists)
+				{
+					hasExistingData = true;
+				}
 			}
-			else if(curIndex() == 0) //Continue
+			
+			if(hasExistingData)
 			{
-				if(loadData()) //data exists
-				{
-					setState(MAP);
-					
-					playMapSong(false);
-				}
-				else
-				{
-					playSound("bonk");
-				}
+				addIndex(1);
+			}
+			else
+			{
+				addIndex(0);
 			}
 		}
 		else if(state == INVENTORYREARRANGE)
@@ -7386,8 +7520,6 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					if(monsters.get(i).hp > 0 && monsters.get(i).spd > highestMonsterSpd) highestMonsterSpd = monsters.get(i).spd;
 				}
 				
-				//TODO: shouldn't be able to flee from some fights (like bosses) - give monsters a canFlee property?
-				
 				double dfleeChance = 60.0*((double)currentUnit.spd/highestMonsterSpd);
 				int fleeChance = (int) dfleeChance;
 				
@@ -7395,8 +7527,8 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				{
 					fleeChance = 100; //fleeing always works
 				}
-				
-				if(rand.nextInt(100) < fleeChance)
+
+				if(rand.nextInt(100) < fleeChance && !preventFlee())
 				{
 					setState(BATTLEFLED);
 				}
@@ -7405,7 +7537,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					int[] animation = new int[7];
 					for(int i=0; i<animation.length; i++) animation[i] = NORMAL;
 					
-					battleAction = new BattleAction(currentUnit,Action.FLEE,null,null,null,animation,null,null,null);
+					battleAction = new BattleAction(currentUnit,Action.actionFromID(Action.FLEE),null,null,null,animation,null,null,null);
 					
 					setState(BATTLEEFFECT);
 					repaint();
@@ -7418,12 +7550,12 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		}
 		else if(state == BATTLESELECTSKILL)
 		{
-			if(currentUnit.canUseSkill(currentUnit.getLearnedActiveSkills().get(curIndex()).action))
+			selectedAction = currentUnit.getLearnedActiveSkills().get(curIndex()).action;
+			
+			if(currentUnit.canUseAction(selectedAction))
 			{
-				selectedAction = currentUnit.getLearnedActiveSkills().get(curIndex()).action;
-				
 				int targetType = selectedAction.targetType;
-				if(targetType == Action.ONEENEMY || targetType == Action.ALLENEMIES)
+				if(targetType == Action.ONEENEMY || targetType == Action.ALLENEMIES || targetType == Action.ALLUNITS)
 				{
 					addIndex(topAliveMonsterIndex());
 				}
@@ -7433,14 +7565,31 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				}
 				else if(targetType == Action.SELF)
 				{
-					addIndex(currentUnit.getBattleIndex());
+					ArrayList<Integer> targets = new ArrayList<Integer>();
+					
+					if(selectedAction.id == Action.MALFUNCTION) //random target
+					{
+						ArrayList<Integer> allTargets = Monster.getExistingPlayerTargets(party);
+						allTargets.addAll(Monster.getExistingMonsterTargets(monsters));
+						
+						targets.add(allTargets.get(rand.nextInt(allTargets.size())));
+					}
+					else
+					{
+						targets.add(currentUnit.getBattleIndex());
+					}
+					
+					doBattleCalculations(currentUnit,selectedAction.id,targets);
 				}
 				else if(targetType == Action.ONEUNIT)
 				{
 					addIndex(topAliveMonsterIndex()+3);
 				}
 				
-				setState(BATTLETARGET);
+				if(targetType != Action.SELF)
+				{
+					setState(BATTLETARGET);
+				}
 			}
 		}
 		else if(state == BATTLESELECTITEM)
@@ -7474,12 +7623,15 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		else if(state == BATTLETARGET)
 		{
 			ArrayList<Integer> targets = new ArrayList<Integer>();
+			
+			int targetType = selectedAction.targetType;
 
-			if(selectedAction.targetType == Action.ONEENEMY)
+			if(targetType == Action.ONEENEMY)
 			{
 				targets.add(monsters.get(curIndex()).getBattleIndex());
 			}
-			else if(selectedAction.targetType == Action.ALLENEMIES)
+			
+			if(targetType == Action.ALLENEMIES || targetType == Action.ALLUNITS)
 			{
 				for(int i=0; i<monsters.size(); i++)
 				{
@@ -7489,11 +7641,13 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					}
 				}
 			}
-			else if(selectedAction.targetType == Action.ONEALLY || selectedAction.targetType == Action.SELF)
+			
+			if(targetType == Action.ONEALLY || targetType == Action.SELF)
 			{
 				targets.add(curIndex());
 			}
-			else if(selectedAction.targetType == Action.ALLALLIES)
+			
+			if(targetType == Action.ALLALLIES || targetType == Action.ALLUNITS)
 			{
 				for(int i=0; i<3; i++)
 				{
@@ -7503,7 +7657,8 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 					}
 				}
 			}
-			else if(selectedAction.targetType == Action.ONEUNIT)
+			
+			if(targetType == Action.ONEUNIT)
 			{
 				targets.add(curIndex());
 			}
@@ -7785,6 +7940,71 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			setState(MAP);
 			removeIndex();
 		}
+		else if(state == DATASELECT1)
+		{
+			setState(DATASELECT2);
+			addIndex(0);
+		}
+		else if(state == DATASELECT2)
+		{
+			if(prevIndex(1) == 0) //New Game
+			{
+				if(data[curIndex()].dataExists)
+				{
+					setState(CONFIRMOVERRIDE);
+					addIndex(0);
+				}
+				else
+				{
+					dataIndex = curIndex();
+					data[dataIndex].newGame();
+					dataToLocal();
+					
+					direction = NORTH;
+					
+					startCutscene(CUTSCENE_INTRO);
+					
+					clearIndex();
+				}
+			}
+			else //Continue
+			{
+				if(data[curIndex()].dataExists)
+				{
+					dataIndex = curIndex();
+					dataToLocal();
+					
+					setState(MAP);
+					playMapSong(false);
+					
+					clearIndex();
+				}
+				else
+				{
+					//TODO: play sound
+				}
+			}
+		}
+		else if(state == CONFIRMOVERRIDE)
+		{
+			if(curIndex() == 0) //No
+			{
+				setState(DATASELECT2);
+				removeIndex();
+			}
+			else //Yes
+			{
+				dataIndex = prevIndex(1);
+				data[dataIndex].newGame();
+				dataToLocal();
+				
+				direction = NORTH;
+				
+				startCutscene(CUTSCENE_INTRO);
+				
+				clearIndex();
+			}
+		}
 	}
 	
 	public void pressedZ()
@@ -7948,6 +8168,16 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			setState(STATUSMENU);
 			removeIndex();
 		}
+		else if(state == DATASELECT2)
+		{
+			setState(DATASELECT1);
+			removeIndex();
+		}
+		else if(state == CONFIRMOVERRIDE)
+		{
+			setState(DATASELECT2);
+			removeIndex();
+		}
 	}
 	
 	public void pressedUp()
@@ -8066,8 +8296,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		}
 		else if(state == TITLESCREEN)
 		{
-			if(curIndex() == 0) setIndex(1);
-			else setIndex(0);
+			
 		}
 		else if(state == BATTLECHOICE)
 		{
@@ -8118,7 +8347,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		{
 			if(curIndex() >= 1 && curIndex() <= 13) decIndex();
 			else if(curIndex() == 14 || curIndex() == 15) setIndex(3);
-			else if(curIndex() >= 16 && curIndex() <= 26) setIndex(curIndex() - 2);
+			else if(curIndex() >= 16 && curIndex() <= 29) setIndex(curIndex() - 2);
 		}
 		else if(state == ACTIVESKILLMENU)
 		{
@@ -8135,6 +8364,17 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				decIndex();
 				if(cursorAlign > 0) cursorAlign--;
 			}
+		}
+		else if(state == DATASELECT2)
+		{
+			if(curIndex() > 0)
+			{
+				decIndex();
+			}
+		}
+		else if(state == CONFIRMOVERRIDE)
+		{
+			setIndex(0);
 		}
 	}
 	
@@ -8232,8 +8472,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		}
 		else if(state == TITLESCREEN)
 		{
-			if(curIndex() == 0) setIndex(1);
-			else setIndex(0);
+			
 		}
 		else if(state == BATTLECHOICE)
 		{
@@ -8291,8 +8530,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		else if(state == STATUSMENUMOREINFO)
 		{
 			if(curIndex() >= 0 && curIndex() <= 12) incIndex();
-			else if(curIndex() >= 14 && curIndex() <= 24) setIndex(curIndex() + 2);
-			else if(curIndex() == 25) incIndex();
+			else if(curIndex() >= 14 && curIndex() <= 27) setIndex(curIndex() + 2);
 		}
 		else if(state == ACTIVESKILLMENU)
 		{
@@ -8309,6 +8547,17 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 				incIndex();
 				if(cursorAlign < 8) cursorAlign++;
 			}
+		}
+		else if(state == DATASELECT2)
+		{
+			if(curIndex() < 2)
+			{
+				incIndex();
+			}
+		}
+		else if(state == CONFIRMOVERRIDE)
+		{
+			setIndex(1);
 		}
 	}
 	
@@ -8448,7 +8697,7 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			else if(curIndex() == 11) setIndex(22);
 			else if(curIndex() == 12) setIndex(24);
 			else if(curIndex() == 13) setIndex(26);
-			else if(curIndex() == 14 || curIndex() == 16 || curIndex() == 18 || curIndex() == 20 || curIndex() == 22 || curIndex() == 24) incIndex();
+			else if(curIndex() == 14 || curIndex() == 16 || curIndex() == 18 || curIndex() == 20 || curIndex() == 22 || curIndex() == 24 || curIndex() == 26 || curIndex() == 28) incIndex();
 		}
 		else if(state == ACTIVESKILLMENU)
 		{
@@ -8475,6 +8724,10 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		else if(state == INNCHOICE)
 		{
 			if(curIndex() == 0) setIndex(1);
+		}
+		else if(state == DATASELECT1)
+		{
+			setIndex(1);
 		}
 	}
 	
@@ -8558,10 +8811,11 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 			else if(curIndex() == 16) setIndex(6);
 			else if(curIndex() == 18) setIndex(7);
 			else if(curIndex() == 20) setIndex(10);
-			else if(curIndex() == 22) setIndex(11);
-			else if(curIndex() == 24) setIndex(12);
-			else if(curIndex() == 26) setIndex(13);
-			else if(curIndex() == 15 || curIndex() == 17 || curIndex() == 19 || curIndex() == 21 || curIndex() == 23 || curIndex() == 25) decIndex();
+			else if(curIndex() == 22) setIndex(10);
+			else if(curIndex() == 24) setIndex(11);
+			else if(curIndex() == 26) setIndex(12);
+			else if(curIndex() == 28) setIndex(13);
+			else if(curIndex() == 15 || curIndex() == 17 || curIndex() == 19 || curIndex() == 21 || curIndex() == 23 || curIndex() == 25 || curIndex() == 27 || curIndex() == 29) decIndex();
 		}
 		else if(state == ACTIVESKILLMENU || state == PASSIVESKILLMENU)
 		{
@@ -8575,11 +8829,19 @@ public class Game extends JPanel implements ActionListener, KeyListener, MouseLi
 		{
 			if(curIndex() == 1) setIndex(0);
 		}
+		else if(state == DATASELECT1)
+		{
+			setIndex(0);
+		}
 	}
 	
 	public void pressedSpace()
 	{
-		if(state == MAP)
+		if(state == TITLESCREEN)
+		{
+			setState(DATASELECT1);
+		}
+		else if(state == MAP)
 		{
 			setState(MAINMENU);
 			addIndex(0);
