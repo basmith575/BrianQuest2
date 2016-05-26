@@ -28,15 +28,26 @@ If you want to run Java through the command prompt, you're on your own because I
 <li><b>Unit.java:</b> Any "unit" that can exist in battle. Can be a character or monster. Some properties are specific to only characters or monsters, but many are shared like status effects, element resistances, stats, etc. Home of the extremely important recalculateStats(), which keeps a character's stats up-to-date with their level, equipment, and passive skills.
 </ul>
 
-<em>TODO:</em>
+<em><b>TODO:</b></em>
+
+<b>High priority:</b>
 <ul>
-<li>Some sort of "cast skill" player animation as a catch-all for skills (to use if the skill doesn't have a custom animation). Should only bother doing this once the actual battle sprites are made (see next todo)
-<li>Replace the old art with new art
-<li>Skill animations (do we want to up the frames and lower the milliseconds between frames?). Low priority since this will be the hardest thing
+<li>When drawing HP bars, we sometimes set the bar length to 1 if bar length < 1 (to handle cases when HP is like 1/1000). We should only be doing this if HP is NOT 0. If HP is 0 then bar length should be 0.
+</ul>
+
+<b>Medium priority:</b>
+<ul>
 <li>Work on formulas (specifically the ones involving probabilities and Dex)
 <li>Come up with good items/equipments, other active/passive skills, etc.
 <li>Cursor memory in battle?
 <li>Options menu - stuff like volume/mute, cursor memory settings, button configuration, etc.
-<li>When drawing HP bars, we sometimes set the bar length to 1 if bar length < 1 (to handle cases when HP is like 1/1000). We should only be doing this if HP is NOT 0. If HP is 0 then bar length should be 0.
+</ul>
+
+<b>Low priority:</b>
+<ul>
+<li>Some sort of "cast skill" player animation as a catch-all for skills (to use if the skill doesn't have a custom animation). Should only bother doing this once the actual battle sprites are made (see next todo)
+<li>How to handle player/monster attack animations? Just don't have them?
+<li>Replace the old art with new art
+<li>Skill animations. Probably the hardest thing. Could have "projectile" for things like shuriken rather than x/y offset.
 <li>Start making the actual game
 </ul>
