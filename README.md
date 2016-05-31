@@ -32,15 +32,15 @@ If you want to run Java through the command prompt, you're on your own because I
 
 <b>High priority:</b>
 <ul>
-<li>When drawing HP bars, we sometimes set the bar length to 1 if bar length < 1 (to handle cases when HP is like 1/1000). We should only be doing this if HP is NOT 0. If HP is 0 then bar length should be 0.
 </ul>
 
 <b>Medium priority:</b>
 <ul>
-<li>Work on formulas (specifically the ones involving probabilities and Dex)
 <li>Come up with good items/equipments, other active/passive skills, etc.
-<li>Cursor memory in battle?
 <li>Options menu - stuff like volume/mute, cursor memory settings, button configuration, etc.
+<li>Show skill %s in skill info menu (in yellow font or something)
+<li>Replace "mp" collection in battleAction with "valueType" (HP or MP)
+<li>Don't remove Amp status effect right away, remove it after displaying effects so it shows up during the effect
 </ul>
 
 <b>Low priority:</b>
@@ -50,4 +50,5 @@ If you want to run Java through the command prompt, you're on your own because I
 <li>Replace the old art with new art
 <li>Skill animations. Probably the hardest thing. Could have "projectile" for things like shuriken rather than x/y offset.
 <li>Start making the actual game
+<li>Pass actual units into "targets" collection rather than their battle indices, remove horrible getUnitFromTargetIndex().
 </ul>
