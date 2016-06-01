@@ -38,9 +38,6 @@ If you want to run Java through the command prompt, you're on your own because I
 <ul>
 <li>Come up with good items/equipments, other active/passive skills, etc.
 <li>Options menu - stuff like volume/mute, cursor memory settings, button configuration, etc.
-<li>Show skill %s in skill info menu (in yellow font or something)
-<li>Replace "mp" collection in battleAction with "valueType" (HP or MP)
-<li>Don't remove Amp status effect right away, remove it after displaying effects so it shows up during the effect
 </ul>
 
 <b>Low priority:</b>
@@ -50,5 +47,4 @@ If you want to run Java through the command prompt, you're on your own because I
 <li>Replace the old art with new art
 <li>Skill animations. Probably the hardest thing. Could have "projectile" for things like shuriken rather than x/y offset.
 <li>Start making the actual game
-<li>Pass actual units into "targets" collection rather than their battle indices, remove horrible getUnitFromTargetIndex().
 </ul>
